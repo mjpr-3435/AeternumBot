@@ -8,7 +8,7 @@ class mdplugin():
     def __init__(self, server: AeServer):
         self.server = server
 
-    async def on_discord_message(self, message: discord.Message):
+    async def listener_on_message(self, message: discord.Message):
         if message.author.bot: return
         elif message.content.lower().strip() == '!!digs':
             await message.channel.send(embed = self.digs_embed())
