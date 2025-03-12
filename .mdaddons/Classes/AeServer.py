@@ -1,5 +1,6 @@
 from mcdis_rcon.classes import Server, McDisClient
-from mcdis_rcon.utils import write_in_file, read_file
+from mcdis_rcon.utils import write_in_file, read_file, hover_and_suggest
+from typing import Union
 import asyncio
 import re
 import os
@@ -22,6 +23,30 @@ class AeServer(Server):
         os.makedirs(os.path.join(self.path_plugins, 'logger'), exist_ok = True)
         if not os.path.exists(self.players_text_path): write_in_file(self.players_text_path, '')
         if not os.path.exists(self.bots_text_path): write_in_file(self.bots_text_path, '')
+
+    def         send_response       (self, target : str, message : Union[str, list[str]], *, colour : str = 'gray'):
+        if isinstance(message, str):
+            self.execute(f'tellraw {target} {{"text": "{message}","color":"{colour}"}}')
+        
+        elif isinstance(message, list) and all(isinstance(i, str) for i in message):
+            for msg in message:
+                self.execute(f'tellraw {target} {{"text": "{msg}","color":"{colour}"}}')
+    
+    def         is_command          (self, message: str, command: str):
+        dummy = message + ' '
+        return dummy.startswith(f'{self.prefix}{command} ')
+
+    def         show_command        (self, target : str, command : str, description : str):
+        signs = [self.prefix, '<', '>', ':', '|']
+        mrkd_command = f'{self.prefix}{command}'
+        
+        for sign in signs: 
+            mrkd_command = mrkd_command.replace(sign, f'§6{sign}§f')
+        
+        description = '  ↳ ' + description
+
+        self.execute(f'tellraw {target} {hover_and_suggest(mrkd_command, suggest = f"{self.prefix}{command}", hover = mrkd_command)}')
+        self.send_response(target, description)
 
     async def   get_data                (self, player: str, data: str):
         self.requested_data[player] = None
