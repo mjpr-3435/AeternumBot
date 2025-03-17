@@ -19,4 +19,4 @@ class mdplugin():
             expresion = message.removeprefix('==')
             value = str(eval(expresion, self.restrictions))
             print(value)
-            self.server.send_response('@a', value, colour = 'golden')
+            self.server.send_response('@a', value, colour = 'gold')
