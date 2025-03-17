@@ -1,6 +1,7 @@
 import discord
 import asyncio
 import shutil
+import importlib
 import sys
 import os
 
@@ -16,38 +17,17 @@ class mdaddon():
                 'MMP'           : ['manager.py', 'chatbridge.py', 'join_motd_ae.py', 'here.py', 'op.py', 'reg-updater.py'                      ],
                 'PMP'           : ['manager.py', 'chatbridge.py', 'here.py']}
         
+        ### Load Bot Related ###
+
         print('     -> Cargando AeExtensions')
 
         if not self.client.path_addons in sys.path: 
             sys.path.insert(0, self.client.path_addons)
 
-            ### Load Bot Related ###
-
-            asyncio.create_task(self.load())
-
-        self.update_server_classes()
-
+        self.reload_modules()
         self.manage_mdplugins()
-
-    def       manage_mdplugins          (self):
-        available_mdplugins = os.listdir(os.path.join(self.client.path_addons, 'mdplugins'))
-
-        for process in self.client.processes:
-            if not process.name in self.config_mdplugins.keys():
-                continue
-            
-            for plugin in os.listdir(process.path_plugins):
-                plugin_path = os.path.join(process.path_plugins, plugin)
-                if not os.path.isdir(plugin_path): os.remove(plugin_path)
-
-            for plugin in self.config_mdplugins[process.name]:
-                if not plugin in available_mdplugins: pass
-                source = os.path.join(self.client.path_addons, 'mdplugins', plugin)
-                dest   = os.path.join(process.path_plugins, plugin)
-
-                shutil.copy(source, dest)
-            
-            process.load_plugins(reload = True)
+        self.update_server_classes()
+        asyncio.create_task(self.load())
     
     async def load                      (self):
 
@@ -72,7 +52,7 @@ class mdaddon():
 
 
         ### Banners ###
-        
+
         from Banners.FriendsDiscords.Creator import friends_creator
         asyncio.create_task(friends_creator         (self.client))
 
@@ -97,12 +77,38 @@ class mdaddon():
             activity=initial_status,
             status=discord.Status.online
         )
-    
+  
+    def       reload_modules            (self):
+        modules = [mod for mod in sys.modules if mod.startswith('Banners.') or mod.startswith('Classes.')]
+
+        for mod in modules:
+            importlib.reload(sys.modules[mod])
+
+    def       manage_mdplugins          (self):
+        available_mdplugins = os.listdir(os.path.join(self.client.path_addons, 'mdplugins'))
+
+        for process in self.client.processes:
+            if not process.name in self.config_mdplugins.keys():
+                continue
+            
+            for plugin in os.listdir(process.path_plugins):
+                plugin_path = os.path.join(process.path_plugins, plugin)
+                if not os.path.isdir(plugin_path): os.remove(plugin_path)
+
+            for plugin in self.config_mdplugins[process.name]:
+                if not plugin in available_mdplugins: pass
+                source = os.path.join(self.client.path_addons, 'mdplugins', plugin)
+                dest   = os.path.join(process.path_plugins, plugin)
+
+                shutil.copy(source, dest)
+            
+            process.load_plugins(reload = True)
+      
     def       update_server_classes     (self):
         from Classes.AeServer import AeServer
         
-        if all([isinstance(x, AeServer) for x in self.client.servers]): return
-
+        if any([x.is_running() for x in self.client.servers]): return
+        
         self.client.processes   = [x for x in self.client.processes if isinstance(x, Network)]
         self.client.servers     = []
 
@@ -113,7 +119,5 @@ class mdaddon():
             print(f'        • {name} -> {server.__class__.__name__}')
 
     def       unload                    (self):
-        return
-    
         for task in self.persistent_tasks:
             task.cancel()
