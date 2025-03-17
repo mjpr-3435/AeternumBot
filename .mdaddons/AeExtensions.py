@@ -67,15 +67,11 @@ class mdaddon():
         self.persistent_tasks.append(task)
 
         ### Status ###
-        
-        initial_status = discord.Activity(
-            type = discord.ActivityType.custom,
-            name = "Aeternum SMP"
-        )
-        
+
         await self.client.change_presence(
-            activity=initial_status,
-            status=discord.Status.online
+            activity = discord.CustomActivity(
+            name = 'Aeternum SMP',
+            status = discord.Status.online)
         )
   
     def       reload_modules            (self):
