@@ -2,7 +2,7 @@ from .Creator import members_creator
 from .Modules import *
 from .TaskLog import *
 
-class task_command(commands.Cog):
+class TaskCommand(commands.Cog):
     def __init__(self, client: commands.Bot):
         self.client = client
         
@@ -51,4 +51,4 @@ class task_command(commands.Cog):
                 await interaction.followup.send('✔')
 
 async def setup(client: commands.Bot):
-    await client.add_cog(task_command(client))
+    await client.add_cog(TaskCommand(client))
