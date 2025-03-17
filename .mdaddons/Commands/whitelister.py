@@ -36,7 +36,7 @@ class WhitelisterCommand(commands.Cog):
         
         uuid = mc_uuid(player = nickname, online = False)
         server = next(filter(lambda x: x.name == 'SMP', self.client.servers), None)
-        whitelist_json_path = os.path.join(server.path_files, 'server' 'whitelist.json')
+        whitelist_json_path = os.path.join(server.path_files, 'server', 'whitelist.json')
 
         with open(whitelist_json_path, "r", encoding="utf-8") as file:
             whitelist = json.load(file)

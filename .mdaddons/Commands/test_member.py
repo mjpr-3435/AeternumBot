@@ -26,24 +26,34 @@ class TestMemberCommand(commands.Cog):
         if not isAdmin(interaction.user) and not self.interviewer_id in [role.id for role in interaction.user.roles]:
             await interaction.response.send_message('✖ No tienes permisos.', ephemeral = True, delete_after = 1)
             return
+        
+        await interaction.response.defer(thinking = True, ephemeral = True)
 
         if action.value == 'Grant':
-            if self.member_id in [role.id for role in interaction.user.roles]:
+            if self.member_id in [role.id for role in member.roles]:
+                await interaction.followup.send('✖ Solo puedes usar esto con miembros nuevos.')
                 return
             
             await self.add_role(member, self.members_id)
             await self.add_role(member, self.test_member_id)
 
         elif action.value == 'Revoke':
-            if self.member_id in [role.id for role in interaction.user.roles]:
+            if not self.test_member_id in [role.id for role in member.roles]:
+                await interaction.followup.send('✖ Solo puedes usar esto con miembros a prueba.')
                 return
             
             await self.remove_role(member, self.members_id)
             await self.remove_role(member, self.test_member_id)
 
         elif action.value == 'Promote':
+            if not self.test_member_id in [role.id for role in member.roles]:
+                await interaction.followup.send('✖ Solo puedes usar esto con miembros a prueba.')
+                return
+            
             await self.remove_role(member, self.test_member_id)
             await self.add_role(member, self.member_id)
+
+        await interaction.followup.send('✔')
 
     async def add_role(self, member: discord.Member, role_id: int):
         role = member.guild.get_role(role_id)
