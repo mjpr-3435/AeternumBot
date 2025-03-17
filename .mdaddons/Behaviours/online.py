@@ -10,7 +10,7 @@ class OnlineBehaviour(commands.Cog):
         self.config_online = \
             {  'Thumbnail'      : 'https://i.postimg.cc/XqQx5rT5/logo.png',
                 'Embed Colour'  : 0x2f3136,
-                'ChannelID'     : 1246511292576170054}
+                'ChannelID'     : 930324106455416883}
 
     @commands.Cog.listener()
     async def on_message                (self, message: discord.Message):

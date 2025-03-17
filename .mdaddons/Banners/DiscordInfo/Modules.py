@@ -27,13 +27,13 @@ config = {
     'Emoji Twitter'     : '<:AeTwitter:1235341007562870825>',
     'Emoji Overviewer'  : '🌐',
     'Foundation Date'   : '2021-05-12',
-    'Channel ID'        : 1341217051158773871}
+    'Channel ID'        : 866452465879744532}
     
 config_form = {      
     'Thumbnail'     : 'https://i.postimg.cc/XqQx5rT5/logo.png',
     'Emoji Yes'     : '<:PepeYes:887447915289776159>',
     'Emoji No'      : '<:PepeNo:887447914291560468>',
-    'Channel ID'    : 1246511292576170054
+    'Channel ID'    : 892445483472142346
     }
 
 tickets_config = {      
