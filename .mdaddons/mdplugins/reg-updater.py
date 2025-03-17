@@ -28,7 +28,7 @@ class mdplugin():
             raw_pos = await self.server.get_data(player, 'Pos')
             raw_pos = raw_pos[raw_pos.find('[') + 1 : raw_pos.find(']')].split(',')
             raw_dim = await self.server.get_data(player, 'Dimension')
-            dim     = raw_dim.split(':')[2].split('"')[0]
+            dim     = raw_dim.replace('"','').split(':')[1]
             pos     = tuple(float(x.strip()[:-1]) for x in raw_pos)
             reg     = self.pos_to_region(pos)
 
@@ -59,7 +59,11 @@ class mdplugin():
                 self.server.send_response(player, '✖ No has agregado ninguna región.')
                 return
             
-            self.action_confirmed       = True
+            elif self.action_confirmed:
+                self.server.send_response(player, '✖ Alguien más ya solicitó la actualización de regiones.')
+                return
+            
+            self.action_confirmed = True
             
             for i in range(5):
                 await asyncio.sleep(1)
