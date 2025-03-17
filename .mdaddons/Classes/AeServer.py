@@ -48,7 +48,7 @@ class AeServer(Server):
         self.execute(f'tellraw {target} {hover_and_suggest(mrkd_command, suggest = f"{self.prefix}{command}", hover = mrkd_command)}')
         self.send_response(target, description)
 
-    async def   get_data                (self, player: str, data: str):
+    async def   get_data                (self, player: str, data: str) -> str:
         self.requested_data[player] = None
         self.execute(f"data get entity {player} {data}")
         

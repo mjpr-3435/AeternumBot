@@ -7,9 +7,9 @@ from Classes.AeServer import AeServer
 
 class mdplugin():
     def __init__(self, server: AeServer):
-        self.server         = server
-        self.targets        = []
-        self.files_to_copy  = {}
+        self.server                 = server
+        self.files_to_copy          = {}
+        self.action_confirmed       = False
 
     async def on_player_command(self, player: str, message: str):
         if not player in self.server.admins:
@@ -25,9 +25,21 @@ class mdplugin():
             self.server.show_command(player, 'ru update'         , 'Actualiza las regiones.')
 
         elif self.server.is_command(message, 'ru add'):
-            self.server.execute(f'data get entity {player}')
-            self.targets.append(player)
+            raw_pos = await self.server.get_data(player, 'Pos')
+            raw_pos = raw_pos[raw_pos.find('[') + 1 : raw_pos.find(']')].split(',')
+            raw_dim = await self.server.get_data(player, 'Dimension')
+            dim     = raw_dim.split(':')[2].split('"')[0]
+            pos     = tuple(float(x.strip()[:-1]) for x in raw_pos)
+            reg     = self.pos_to_region(pos)
 
+            if not player in self.files_to_copy.keys(): self.files_to_copy[player] = {'overworld':[],
+                                                                        'the_nether':[],
+                                                                        'the_end':[]}
+
+            if not reg in self.files_to_copy[player][dim]: self.files_to_copy[player][dim].append(reg)
+
+            self.show_list(player)
+   
         elif self.server.is_command(message, 'ru list'):
             self.show_list(player)
 
@@ -39,10 +51,20 @@ class mdplugin():
 
         elif self.server.is_command(message, 'ru update'):
 
-            if not self.files_to_copy: 
+            if  not player in self.files_to_copy.keys() or \
+                not self.files_to_copy[player]['overworld']  +\
+                    self.files_to_copy[player]['the_nether'] +\
+                    self.files_to_copy[player]['the_end']: 
+                
                 self.server.send_response(player, '✖ No has agregado ninguna región.')
                 return
             
+            self.action_confirmed       = True
+            
+            for i in range(5):
+                await asyncio.sleep(1)
+                self.server.send_response('@a', f'El servidor se reiniciará en {5-i} segundos.')
+                
             smp_server = next(filter(lambda x: x.name == 'SMP', self.server.client.servers), None)
             
             if not smp_server:
@@ -87,30 +109,6 @@ class mdplugin():
                 smp_server.execute('save-on')
             
             self.server.start()
-
-    async def listener_events(self, log : str):
-        if not 'INFO]:' in log: 
-            pass
-
-        elif any(f'{x} has the following entity data' in log for x in self.targets):
-            match = re.search(r"(.*?) has the following entity data: (.*)", log)
-            player = match.group(1).strip().split(' ')[-1]
-            data = match.group(2)
-            raw_pos = data[data.find(', Pos:'):]
-            raw_pos = raw_pos[raw_pos.find('[') + 1 : raw_pos.find(']')].split(',')
-            raw_dim = data[data.find(', Dimension:'):]
-            dim     = raw_dim.split(':')[2].split('"')[0]
-            pos     = tuple(float(x.strip()[:-1]) for x in raw_pos)
-            reg     = self.pos_to_region(pos)
-
-            if not player in self.files_to_copy.keys(): self.files_to_copy[player] = {'overworld':[],
-                                                                        'the_nether':[],
-                                                                        'the_end':[]}
-
-            if not reg in self.files_to_copy[player][dim]: self.files_to_copy[player][dim].append(reg)
-
-            self.show_list(player)
-            self.targets.remove(player)
 
     def show_list(self, player : str):
         if not player in self.files_to_copy.keys():

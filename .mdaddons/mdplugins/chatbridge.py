@@ -7,15 +7,22 @@ class mdplugin():
     def __init__(self, server: AeServer):
         self.server                     = server
         self.webhook : discord.Webhook  = None
-        self.config                     = {'Webhook URL' : ''}
+        self.chatbrige_id               = 930324106455416883
 
         asyncio.create_task(self.load())
 
     async def load(self):
-        try:
-            self.webhook = await discord.Webhook.from_url(url = self.config['Webhook URL'], client = self.server.client).fetch()
-        except:
-            self.server.add_log('Error en la configuración del Chatbridge. No se ha encontrado el webhook.')
+        channel = self.server.client.get_channel(self.chatbrige_id)
+        name = "ChatBridge"
+
+        webhooks = await channel.webhooks()
+
+        for webhook in webhooks:
+            if webhook.name == name:
+                self.webhook = webhook
+                return
+        
+        # self.webhook = channel.create_webhook(name=name)
 
     async def listener_on_message   (self, message: discord.Message):
         if self.webhook == None: return
@@ -76,4 +83,4 @@ class mdplugin():
 
         for server in self.server.client.servers:
             if server.name != self.server.name and (server.online_players + server.bots):
-                server.send_response('@a', msg)  
+                server.send_response('@a', msg) 

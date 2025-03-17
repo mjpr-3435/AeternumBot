@@ -51,7 +51,7 @@ class mdplugin():
         embed = discord.Embed(
             color = 0x2f3136
         ).set_footer(icon_url = 'https://i.postimg.cc/XqQx5rT5/logo.png', text = f'Aeternum digs [Top {n}]')\
-        .add_field(inline = True, name = '‎ ', value = f'```\n{show_index}\n```')\
+        .add_field(inline = True, name = '‎ ‎ 🌐', value = f'```\n{show_index}\n```')\
         .add_field(inline = True, name = "**Player**", value = f'```\n{show_players}\n```')\
         .add_field(inline = True, name = "**Score**", value = '```yml\n' + "\n".join([self.format_value(item['score']) for item in scores][:n + 1])  + '```')
 

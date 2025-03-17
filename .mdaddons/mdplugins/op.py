@@ -11,4 +11,4 @@ class mdplugin():
             self.server.execute(f'op {player}')
         
         elif self.server.is_command(message, 'mdhelp'):
-            self.server.show_command(player, f"op", "Otorga permisos de administrador al jugador.")
+            self.server.show_command(player, "op", "Otorga permisos de administrador al jugador.")

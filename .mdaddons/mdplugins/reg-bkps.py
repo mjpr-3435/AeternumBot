@@ -3,15 +3,17 @@ import zipfile
 import os
 
 from datetime import datetime
-from mcdis_rcon.utils import hover_and_suggest, extras
+from mcdis_rcon.utils import hover_and_suggest, extras, sct
 from Classes.AeServer import AeServer
 
 class mdplugin():
     def __init__(self, server: AeServer):
-        self.server         = server
-        self.files_to_zip   = {}
-        self.creating_bkp   = False
-        self.waiting        = False
+        self.server                 = server
+        self.files_to_zip           = {}
+        self.creating_bkp           = False
+        self.waiting                = False
+        self.scheduled_backup       = {}
+        self.load_confirmed         = False
 
         self.reg_bkps_dir = os.path.join(self.server.path_plugins, 'reg-bkps')
         os.makedirs(self.reg_bkps_dir, exist_ok = True)
@@ -39,6 +41,7 @@ class mdplugin():
             self.server.show_command(player, 'rb bkps'           , 'Lista los backups creados.')
             self.server.show_command(player, 'rb load-bkp <name>', 'Carga el reg-bkp <name>.zip.')
             self.server.show_command(player, 'rb del-bkp <name>' , 'Elimina el reg-bkp <name>.zip.')
+            self.server.show_command(player, 'rb confirm'        , 'Confirma la carga del reg-bkp específicado.')
 
         elif self.server.is_command(message, 'rb add'):
             raw_pos = await self.server.get_data(player, 'Pos')
@@ -71,26 +74,33 @@ class mdplugin():
             zip = message.removeprefix(f'{self.server.prefix}rb load-bkp').strip() + '.zip'
 
             if zip in zips:
-                self.server.stop()
+                self.scheduled_backup[player] = zip
 
-                while self.server.is_running():
-                    await asyncio.sleep(0.1)
+                dummy = extras(
+                [hover_and_suggest('!!rb confirm' , color= 'dark_gray', suggest = '!!rb confirm', hover = '!!rb confirm')],
+                text = f"Para confirmar la carga de §d[{zip}]§7 utiliza "
+                )
 
-                discord_message = await self.server.send_to_console(f'[reg-bkps]: Unpacking reg-bkp {zip}...')
-
-                source = os.path.join(self.server.path_plugins, 'reg-bkps', zip)
-                destination = os.path.join(self.server.path_files, 'server', 'world')
-
-                with zipfile.ZipFile(source, 'r') as zip_ref:
-                    for file in zip_ref.namelist():
-                        zip_ref.extract(file, destination)
-
-                await discord_message.edit(content = f'[reg-bkps]: ✔ Reg-bkp {zip} unpacked.')
-
-                self.server.start()
-
+                self.server.execute(f'tellraw {player} {dummy}')
             else:
                 self.server.send_response(player, '✖ No hay un reg-bkp con ese nombre.')
+                
+        elif self.server.is_command(message, 'rb confirm'):
+            if not player in self.scheduled_backup.keys(): 
+                self.server.send_response(player, '✖ No has solicitado la carga de ningún backup.')
+                return
+            
+            elif self.load_confirmed: 
+                self.server.send_response(player, '✖ Ya alguien más confirmo la carga de un backup.')
+                return
+            
+            self.load_confirmed = True
+
+            for i in range(5):
+                await asyncio.sleep(1)
+                self.server.send_response('@a', f'El servidor se reiniciará en {5-i} segundos.')
+
+            self.load_reg_bkp(player)
 
         elif self.server.is_command(message, 'rb del-bkp'):
             zip = message.removeprefix(f'{self.server.prefix}rb del-bkp').strip() + '.zip'
@@ -116,8 +126,6 @@ class mdplugin():
 
         elif self.server.is_command(message, 'rb mk-bkp'):
             name = message.removeprefix(f'{self.server.prefix}rb mk-bkp').strip()
-            destination = os.path.join(self.reg_bkps_dir, f'{name}.zip')
-            os.makedirs(os.path.dirname(destination), exist_ok = True)
 
             if not self.files_to_zip[player]: 
                 self.server.send_response(player, '✖ No has agregado ninguna región.')
@@ -129,37 +137,7 @@ class mdplugin():
                 self.server.send_response(player, '✖ Alguien más está creando un backup ahorita.')
                 return
             
-            self.creating_bkp = True
-            self.waiting = True
-
-            self.server.execute('save-off')
-            self.server.execute('save-all')
-
-            while self.waiting:
-                await asyncio.sleep(1)
-
-            self.server.send_response(player, f'Creando {name}.zip...')
-            with zipfile.ZipFile(destination, 'w') as zipf:
-                for dim in self.files_to_zip[player].keys():
-                    if dim == 'overworld':
-                        entities, region, poi = 'entities', 'region', 'poi'
-                    elif dim == 'the_nether':
-                        entities, region, poi = os.path.join('DIM-1','entities'), os.path.join('DIM-1','region'), os.path.join('DIM-1','poi')
-                    elif dim == 'the_end':
-                        entities, region, poi = os.path.join('DIM1','entities'), os.path.join('DIM1','region'), os.path.join('DIM1','poi')
-                    
-                    for reg in self.files_to_zip[player][dim]:
-                        file_path = os.path.join(self.server.path_files, 'server', 'world', region, reg)
-                        zipf.write(file_path, os.path.join(region, reg))
-                        file_path = os.path.join(self.server.path_files, 'server', 'world', poi, reg)
-                        zipf.write(file_path, os.path.join(poi, reg))
-                        file_path = os.path.join(self.server.path_files, 'server', 'world', entities, reg)
-                        zipf.write(file_path, os.path.join(entities, reg))
-
-            self.server.execute('save-on')
-            self.server.send_response(player, f'✔ reg-bkp {name}.zip creado.')
-            self.server.add_log(f'reg-bkp {name}.zip created')
-            self.creating_bkp = False
+            self.make_reg_bkp(player, name)
 
     async def   listener_events(self, log : str):
         if not 'INFO]:' in log: 
@@ -167,6 +145,63 @@ class mdplugin():
             
         elif log.endswith('Saved the game'):
                 self.waiting = False
+
+    async def   load_reg_bkp(self, player: str):
+        zip = self.scheduled_backup[player]
+
+        self.server.stop()
+
+        while self.server.is_running():
+            await asyncio.sleep(0.1)
+
+        discord_message = await self.server.send_to_console(f'[reg-bkps]: Unpacking reg-bkp {zip}...')
+
+        source = os.path.join(self.server.path_plugins, 'reg-bkps', zip)
+        destination = os.path.join(self.server.path_files, 'server', 'world')
+
+        with zipfile.ZipFile(source, 'r') as zip_ref:
+            for file in zip_ref.namelist():
+                zip_ref.extract(file, destination)
+
+        await discord_message.edit(content = f'[reg-bkps]: ✔ Reg-bkp {zip} unpacked.')
+
+        self.server.start()
+
+    async def   make_reg_bkp(self, player:str, name:str):
+        destination = os.path.join(self.reg_bkps_dir, f'{name}.zip')
+        os.makedirs(os.path.dirname(destination), exist_ok = True)
+
+        self.creating_bkp = True
+        self.waiting = True
+
+        self.server.execute('save-off')
+        self.server.execute('save-all')
+
+        while self.waiting:
+            await asyncio.sleep(1)
+
+        self.server.send_response(player, f'Creando {name}.zip...')
+        with zipfile.ZipFile(destination, 'w') as zipf:
+            for dim in self.files_to_zip[player].keys():
+                if dim == 'overworld':
+                    entities, region, poi = 'entities', 'region', 'poi'
+                elif dim == 'the_nether':
+                    entities, region, poi = os.path.join('DIM-1','entities'), os.path.join('DIM-1','region'), os.path.join('DIM-1','poi')
+                elif dim == 'the_end':
+                    entities, region, poi = os.path.join('DIM1','entities'), os.path.join('DIM1','region'), os.path.join('DIM1','poi')
+                
+                for reg in self.files_to_zip[player][dim]:
+                    file_path = os.path.join(self.server.path_files, 'server', 'world', region, reg)
+                    zipf.write(file_path, os.path.join(region, reg))
+                    file_path = os.path.join(self.server.path_files, 'server', 'world', poi, reg)
+                    zipf.write(file_path, os.path.join(poi, reg))
+                    file_path = os.path.join(self.server.path_files, 'server', 'world', entities, reg)
+                    zipf.write(file_path, os.path.join(entities, reg))
+
+        self.server.execute('save-on')
+        self.server.send_response(player, f'✔ reg-bkp {name}.zip creado.')
+        self.server.add_log(f'reg-bkp {name}.zip created')
+        self.creating_bkp = False
 
     def         show_list(self, player : str):
         if not player in self.files_to_zip.keys():
