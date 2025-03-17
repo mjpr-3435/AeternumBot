@@ -6,6 +6,9 @@ class mdplugin():
         self.server = server
 
     async def on_player_command(self, player: str, message: str):
+        if self.server.is_command(message, 'mdhelp'):
+            self.server.show_command(player, 'here', 'Muestra la posición del jugador.')
+
         if self.server.is_command(message, 'here'):
             raw_pos : str = await self.server.get_data(player, 'Pos')
             raw_dim : str = await self.server.get_data(player, 'Dimension')
