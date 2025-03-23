@@ -95,17 +95,10 @@ class mdplugin():
                     entities, region, poi = os.path.join('DIM1','entities'), os.path.join('DIM1','region'), os.path.join('DIM1','poi')
                 
                 for reg in self.files_to_copy[player][dim]:
-                    source = os.path.join(smp_server.path_files, 'server', 'world', region, reg)
-                    destination = os.path.join(self.server.path_files,  'server', 'world', region, reg)
-                    shutil.copy2(source, destination)
-
-                    source = os.path.join(smp_server.path_files,  'server', 'world', poi, reg)
-                    destination = os.path.join(self.server.path_files,  'server', 'world', poi, reg)
-                    shutil.copy2(source, destination)
-
-                    source = os.path.join(smp_server.path_files, 'server', 'world', entities, reg)
-                    destination = os.path.join(self.server.path_files,  'server', 'world', entities, reg)
-                    shutil.copy2(source, destination)
+                    for folder in [region, poi, entities]:
+                        source = os.path.join(smp_server.path_files, 'server', 'world', folder, reg)
+                        destination = os.path.join(self.server.path_files, 'server', 'world', folder, reg)
+                        shutil.copy2(source, destination)
 
             await discord_message.edit(content = f'```md\n[reg-updater]: ✔ Files have been copied.\n```')
 
