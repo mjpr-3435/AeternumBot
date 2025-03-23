@@ -72,10 +72,10 @@ class mdplugin():
                 self.server.send_response('@a', f'El servidor se reiniciará en {5-i} segundos.')
 
             if player in self.scheduled_load_backup.keys():
-                self.load_bkp(player)
+                await self.load_bkp(player)
 
             elif player in self.scheduled_make_backup:
-                self.make_bkp()
+                await self.make_bkp()
 
         elif self.server.is_command(message, 'bk del-bkp'):
             zip = message.removeprefix(f'{self.server.prefix}del-bkp').strip() + '.zip'
