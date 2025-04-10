@@ -10,8 +10,8 @@ class mdplugin():
             self.server.show_command(player, 'here', 'Muestra la posición del jugador.')
 
         if self.server.is_command(message, 'here'):
-            raw_pos : str = await self.server.get_data(player, 'Pos')
-            raw_dim : str = await self.server.get_data(player, 'Dimension')
+            raw_pos = await self.server.get_data(player, 'Pos')
+            raw_dim = await self.server.get_data(player, 'Dimension')
 
             raw_pos = raw_pos[raw_pos.find('[') + 1 : raw_pos.find(']')].split(',')
             dim1     = raw_dim.replace('"','').split(':')[1]
@@ -42,6 +42,5 @@ class mdplugin():
                                     hover(f'[{pos1[0]}, {pos1[1]}, {pos1[2]}]', color = color[dim1], hover = show_dim[dim1])],
                                     text = f'@{player} ', color = 'gray')
             
-            message = message.replace('\n','')
             self.server.execute(f'tellraw @a {message}')
             self.server.execute(f'effect give {player} minecraft:glowing {10} 0 true')

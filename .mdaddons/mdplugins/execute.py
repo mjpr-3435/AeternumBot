@@ -1,13 +1,14 @@
 import os
 import asyncio
 
-from mcdis_rcon.utils import extras, hover_and_suggest, read_yml
+from mcdis_rcon.utils import extras, hover_and_suggest, read_yml, sct, truncate, hover
 from Classes.AeServer import AeServer
 
 class mdplugin():
     def __init__(self, server: AeServer):
         self.server = server
         self.config = {"MobSwitch" : "Reset"}
+        self.running = []
 
     async def on_already_started    (self):
         await asyncio.sleep(5)
@@ -31,9 +32,10 @@ class mdplugin():
     async def on_player_command     (self, player: str, message: str):
         commands = [file.removesuffix('.yml') for file in os.listdir(self.server.path_commands) if file.endswith('.yml')]
         commands.sort()
+        raw_message = message
         message = message.replace(' ', '').lower()
 
-        if self.server.is_command(message, 'mdhelp'):
+        if self.server.is_command(raw_message, 'mdhelp'):
             self.server.show_command(player, 
                             "commands", 
                             "Lista de comandos predifinidos del servidor.")
@@ -75,19 +77,31 @@ class mdplugin():
                     self.server.execute(f'tellraw {player} {ext}')
                 return
             
+
             if action.lower().replace(' ','') in [action.lower().replace(' ','') for action in keys]:
                 action = next(filter(lambda x: x.lower().replace(' ','') == action.lower().replace(' ',''), keys))
+                
+                if f'{command}:{action}' in self.running:
+                    self.server.send_response(player, '✖ Alguien ya está ejecutando este comando.')
+                    return
+                
                 commands = data[action]   
                 self.server.send_response(player, 'Ejecutando comandos...')
+                self.running.append(f'{command}:{action}')
                 
                 for cmd in commands:
+                    cmd_log = extras(text = '• Ejecutando ', extras = [hover(text = f'[{truncate(cmd,30)}].', color = 'dark_gray', hover = cmd)])
+                    self.server.execute(f'tellraw {player} {cmd_log}')
+
                     if 'await' in cmd:
                         await asyncio.sleep(int(cmd.replace('await','').strip()))
                         continue
                     self.server.execute(cmd.strip())
                     await asyncio.sleep(1)
 
+                self.running.remove(f'{command}:{action}')
+
                 self.server.send_response(player, f'✔ {command}: Comandos ejecutados.')
 
             else:
-                self.server.send_response(player, "✖ No hay una acción con ese nombre.")
+                self.server.send_response(player, '✖ No hay una acción con ese nombre.')

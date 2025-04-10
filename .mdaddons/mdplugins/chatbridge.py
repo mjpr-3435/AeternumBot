@@ -21,8 +21,6 @@ class mdplugin():
             if webhook.name == name:
                 self.webhook = webhook
                 return
-        
-        # self.webhook = channel.create_webhook(name=name)
 
     async def listener_on_message   (self, message: discord.Message):
         if self.webhook == None: return

@@ -12,10 +12,10 @@ class mdaddon():
         self.client               = client
         self.persistent_tasks     = []
         self.config_mdplugins = \
-            {   'SMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'execute.py', 'reg-bkps.py', 'scoreboard.py'   ],
-                'CMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'op.py'                                        ],
-                'MMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'op.py', 'reg-updater.py'                      ],
-                'PMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'here.py']}
+            {   'SMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'execute.py', 'reg-bkps.py', 'scoreboard.py', 'tts_addon.py'],
+                'CMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'op.py', 'tts_addon.py'                                     ],
+                'MMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'op.py', 'reg-updater.py', 'tts_addon.py'                   ],
+                'PMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'here.py', 'tts_addon.py']}
         
         ### Load Bot Related ###
 

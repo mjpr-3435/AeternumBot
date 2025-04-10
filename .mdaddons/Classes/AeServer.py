@@ -51,8 +51,10 @@ class AeServer(Server):
     async def   get_data                (self, player: str, data: str) -> str:
         self.requested_data[player] = None
         self.execute(f"data get entity {player} {data}")
+        max_iter = 1000
         
-        while not self.requested_data[player]:
+        while not self.requested_data[player] and max_iter:
+            max_iter -= 1
             await asyncio.sleep(0.01)
         
         return self.requested_data.pop(player)
@@ -84,10 +86,9 @@ class AeServer(Server):
 
                 await self.call_plugins('on_player_join', (player,))
         
-            elif log.endswith('left the game'):
-                match = re.search(r"(.*?) left the game", log)
-                formated_player = match.group(1).strip().split(' ')[-1]
-                player = next(filter(lambda x: x == formated_player, self.bots + self.online_players), None)
+            elif log.endswith('lost connection: Disconnected'):
+                match = re.search(r"(.*?) lost connection: Disconnected", log)
+                player = match.group(1).strip().split(' ')[-1]
                 
                 if player in self.bots: self.bots.remove(player)
                 elif player in self.online_players: self.online_players.remove(player)
