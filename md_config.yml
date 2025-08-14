@@ -3,11 +3,8 @@
 # =========================================
 
 ### Application designed to stream the Minecraft console to Discord.
-### This application is intended to work on Linux systems.
-
-### General Advice:
+### This application is intended to work on Linux systems. (Tested on Ubuntu 22.04.3 LTS)
 ### While it may run on Windows, some features may not work as expected.
-### The File Manager may not function properly if you do not own the files in the directory where McDis is executed.
 ### To apply any changes, you must restart McDis!
 
 
@@ -88,16 +85,6 @@ Processes:
         
     PMP:
       start_cmd: python3 -m mcdreforged
-      stop_cmd: stop
-      blacklist: 
-        - 'Changed the block at'
-        - 'Successfully filled'
-        - 'WARN]:'
-        - 'No player was found'
-        - '~[server-intermediary.jar:?]'
-   
-    SMP 1.12:
-      start_cmd: java -Xms4G -Xmx4G -Dfile.encoding=UTF-8 -jar launcher.jar nogui
       stop_cmd: stop
       blacklist: 
         - 'Changed the block at'

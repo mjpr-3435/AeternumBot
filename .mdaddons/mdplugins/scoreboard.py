@@ -92,6 +92,7 @@ class ScoreboardView(discord.ui.View):
             embed = self.mdplugin.scoreboard_embed(self.title, self.scores, self.page),
             view = self
         )
+
     async def   _update_interface (self, interaction: discord.Interaction):
         if not interaction.response.is_done():
             await interaction.response.defer()
@@ -105,18 +106,9 @@ class ScoreboardView(discord.ui.View):
             view = self
         )
 
-class UpdateButton          (discord.ui.Button):
-
-    def __init__(self):
-        super().__init__(label='🔄', style=discord.ButtonStyle.gray)
-        self.view: ScoreboardView
-
-    async def callback(self, interaction: discord.Interaction):
-        await self.view._update_interface(interaction)
-
 class PreviousPageButton    (discord.ui.Button):
     def __init__(self):
-        super().__init__(label = '<', style = discord.ButtonStyle.gray, row = 2)
+        super().__init__(label = '<', style = discord.ButtonStyle.gray)
         self.view : ScoreboardView
 
     async def callback(self, interaction: discord.Interaction):
@@ -126,7 +118,7 @@ class PreviousPageButton    (discord.ui.Button):
         
 class NextPageButton        (discord.ui.Button):
     def __init__(self):
-        super().__init__(label = '>', style = discord.ButtonStyle.gray, row = 2)
+        super().__init__(label = '>', style = discord.ButtonStyle.gray)
         self.view : ScoreboardView
 
     async def callback(self, interaction: discord.Interaction):

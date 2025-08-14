@@ -102,11 +102,22 @@ class mdplugin():
 
         return messages
     
-    def         add_motd            (self, message : str):
-        content = read_file(self.path_motd).strip().split('\n')
+    def add_motd(self, message: str):
+        replacements = {
+        r'\black': '§0', r'\dark_blue': '§1', r'\dark_green': '§2', r'\dark_aqua': '§3',
+        r'\dark_red': '§4', r'\dark_purple': '§5', r'\gold': '§6', r'\gray': '§7',
+        r'\dark_gray': '§8', r'\blue': '§9', r'\green': '§a', r'\aqua': '§b',
+        r'\red': '§c', r'\light_purple': '§d', r'\yellow': '§e', r'\white': '§f',
+        r'\obfuscated': '§k', r'\bold': '§l', r'\strikethrough': '§m',
+        r'\underline': '§n', r'\italic': '§o', r'\reset': '§r'
+        }
         
+        for key, value in replacements.items():
+            message = message.replace(key, value)
+
+        content = read_file(self.path_motd).strip().split('\n')
         write_in_file(self.path_motd, '\n'.join(content + [message]))
-    
+
     def         del_motd            (self, index : int):
         content = self.get_motd()
         content.pop(index - 1)

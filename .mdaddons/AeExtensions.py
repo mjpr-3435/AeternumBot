@@ -15,7 +15,10 @@ class mdaddon():
             {   'SMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'execute.py', 'reg-bkps.py', 'scoreboard.py', 'tts_addon.py'],
                 'CMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'op.py', 'tts_addon.py'                                     ],
                 'MMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'op.py', 'reg-updater.py', 'tts_addon.py'                   ],
-                'PMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'here.py', 'tts_addon.py']}
+                'PMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'here.py', 'tts_addon.py'],
+                'Dummy'         : ['manager.py', 'chatbridge.py', 'calc.py', 'here.py', 'tts_addon.py', 'dummy_manager.py'],
+                'SMP 1.12'      : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'execute.py', 'reg-bkps.py', 'scoreboard.py', 'tts_addon.py']
+                }
         
         ### Load Bot Related ###
 
@@ -52,10 +55,6 @@ class mdaddon():
 
 
         ### Banners ###
-
-        from Banners.FriendsDiscords.Creator import friends_creator
-        asyncio.create_task(friends_creator         (self.client))
-
         from Banners.MembersInfo.Creator import members_creator, members_extras
         asyncio.create_task(members_extras          (self.client))
         task = asyncio.create_task(members_creator  (self.client))
@@ -78,8 +77,11 @@ class mdaddon():
         modules = [mod for mod in sys.modules if mod.startswith('Banners.') or mod.startswith('Classes.')]
 
         for mod in modules:
-            importlib.reload(sys.modules[mod])
-
+            try:
+                importlib.reload(sys.modules[mod])
+            except:
+                pass
+            
     def       manage_mdplugins          (self):
         available_mdplugins = os.listdir(os.path.join(self.client.path_addons, 'mdplugins'))
 

@@ -1,6 +1,8 @@
 from mcdis_rcon.classes import Server, McDisClient
 from mcdis_rcon.utils import write_in_file, read_file, hover_and_suggest
+from datetime import datetime
 from typing import Union
+import pandas as pd
 import asyncio
 import re
 import os
@@ -77,18 +79,20 @@ class AeServer(Server):
                 player = player_and_ip.split('[')[0]
                 local = player_and_ip.removeprefix(player) == '[local]'
                 
-                if local:
+                if local and not player in self.bots:
                     self.bots.append(player)
                     self.add_bot_log(player)
-                else:
+                elif not local and not player in self.online_players:
                     self.online_players.append(player)
                     self.add_player_log(player)
+                    self.update_player_date(player)
 
                 await self.call_plugins('on_player_join', (player,))
         
-            elif log.endswith('lost connection: Disconnected'):
-                match = re.search(r"(.*?) lost connection: Disconnected", log)
-                player = match.group(1).strip().split(' ')[-1]
+            elif log.endswith('left the game'):
+                match = re.search(r"(.*?) left the game", log)
+                formated_player = match.group(1).strip().split(' ')[-1]
+                player = next(filter(lambda x: x == formated_player, self.bots + self.online_players), None)
                 
                 if player in self.bots: self.bots.remove(player)
                 elif player in self.online_players: self.online_players.remove(player)
@@ -135,7 +139,7 @@ class AeServer(Server):
         
         if player in bots:
             bots.remove(player)
-            write_in_file(self.bots_text_path, bots)
+            write_in_file(self.bots_text_path, '\n'.join(bots))
 
         if player in players: return
         
@@ -147,7 +151,7 @@ class AeServer(Server):
         
         if bot in players:
             players.remove(bot)
-            write_in_file(self.players_text_path, players)
+            write_in_file(self.players_text_path, '\n'.join(players))
 
         if bot in bots: return
 
@@ -162,3 +166,12 @@ class AeServer(Server):
         bots = read_file(self.bots_text_path).strip().split('\n') 
 
         return bots
+    
+    def         update_player_date      (self, player: str):
+        whitelist_log = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Banners', 'MembersInfo','WhitelistLog.csv')
+        df = pd.read_csv(whitelist_log, index_col='index')
+        
+        if player in df['nickname'].values:
+            df.loc[df['nickname'] == player, 'date'] = datetime.now().strftime('%Y-%m-%d')
+            df.to_csv(whitelist_log)
+        

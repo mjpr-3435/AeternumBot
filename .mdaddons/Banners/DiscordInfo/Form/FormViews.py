@@ -37,7 +37,6 @@ class form_banner_views(discord.ui.View):
         else:
             await interaction.response.send_message('✖ Solo puede interactuar con el formulario el creador del mismo.', ephemeral = True, delete_after = 5)
 
-
 class modal_form_builder(discord.ui.Modal, title = 'Preguntas de Decorador'):
     question_1 = discord.ui.TextInput(label = 'Describe tu estilo de decoración', 
                                       style = discord.TextStyle.paragraph)
@@ -67,7 +66,6 @@ class modal_form_builder(discord.ui.Modal, title = 'Preguntas de Decorador'):
 
         response = await interaction.followup.send('✔ Las respuestas fueron agregadas a tu formulario.\nNo olvides enviar tus evidencias!')
         await response.delete(delay = 60)
-
 
 class es_form_grinder_modal(discord.ui.Modal, title = 'Preguntas de Grinder'):
     question_1 = discord.ui.TextInput(label = '¿Cuál es el rango de efecto de un beacon?')
@@ -147,7 +145,8 @@ class es_form_modal(discord.ui.Modal, title = 'Formulario de ingreso'):
                 timestamp = datetime.now())\
             .set_footer(text = 'Forms System \u200b', icon_url = interaction.client.user.display_avatar)\
             .add_field(inline = False, name = f'> Formulario {interaction.user.display_name}', value = '')\
-            .add_field(inline = False, name = f'Cuenta de discord'   , value = interaction.user.mention)\
+            .add_field(inline =  True, name = f'Cuenta de discord'   , value = interaction.user.mention)\
+            .add_field(inline =  True, name = f'Ticket'              , value = interaction.channel.mention)\
             .add_field(inline = False, name = modal.question_1.label , value = str(modal.question_1).strip()[:1024])\
             .add_field(inline = False, name = modal.question_2.label , value = str(modal.question_2).strip()[:1024])\
             .add_field(inline = False, name = modal.question_3.label , value = str(modal.question_3).strip()[:1024])\
@@ -168,6 +167,10 @@ class es_form_modal(discord.ui.Modal, title = 'Formulario de ingreso'):
             await new_form.add_reaction('❌')
         
         form_info_update(interaction.message.id, {'log_message_id': new_form.id})
+
+        await interaction.message.edit(embed = interaction.message.embeds[0].add_field(
+            name = '> Formulario Registrado',
+            value = f'📋{new_form.jump_url} (Utilidad para los entrevistadores)'))
         
         response = await interaction.followup.send(f'✔ Las respuestas fueron agregadas a tu formulario.')
         await response.delete(delay = 60)

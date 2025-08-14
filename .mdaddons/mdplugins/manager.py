@@ -17,17 +17,17 @@ class mdplugin():
                 msgs.append(hover(f'[{server.name}] ', color = 'gray', hover = players))
 
             self.server.execute(f'tellraw {player} {extras(msgs, text = "Jugadores: ")}')
-
-        if not player in self.server.admins:
-            return
         
-        elif self.server.is_command(message, 'mdhelp'):
+        if self.server.is_command(message, 'mdhelp'):
             self.server.show_command(player, f"pm help", "Muestra los comandos del processes manager.")
 
         elif self.server.is_command(message, 'pm help'):
             self.server.show_command(player, f"online", "Muestra los jugadores en los servidores.")
             self.server.show_command(player, f"status", "Muestra el estado de los procesos.")
             self.server.show_command(player, f"start <process>", "Abrir el proceso.")
+            
+            if not player in self.server.admins: return
+            
             self.server.show_command(player, f"stop <process | default : {self.server.name}>", "Detener el proceso.")
             self.server.show_command(player, f"restart <process | default : {self.server.name}>", "Reiniciar el proceso.")
             self.server.show_command(player, f"mdreload <process | default : {self.server.name}>", "Recargar los mdplugins del proceso.")
@@ -86,6 +86,8 @@ class mdplugin():
                     process.start()
                 else:
                     self.server.send_response(player, "✖ No hay un proceso con ese nombre.")
+
+        elif not player in self.server.admins: return
 
         elif self.server.is_command(message, 'stop'):
             arg = message.removeprefix(self.server.prefix + 'stop').strip().lower()

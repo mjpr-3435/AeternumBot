@@ -10,8 +10,9 @@ def apply_en_embed() -> list[discord.Embed]:
             title ='Form',
             colour = 0x9BBEC8,
             description =
-                f'To do this, we will ask you to fill out a form which you can access by pressing the `Tickets` button. Once you have submitted your form, you will be able to use the ticket to respond to the interviewers\' questions.\n\n'
-                f'Keep in mind that this is your first impression on us and, therefore, it is also the one that will carry the most weight when deciding whether to grant you access to the server. We recommend that you take your time, answer carefully, and try to elaborate as much as possible in your responses.')]
+                f"To do this, we will ask you to fill out a form, which you can access after creating a ticket using the `Tickets` button. Once you have submitted your form, you can use the ticket to answer the interviewers’ questions.\n\n"
+                f"Keep in mind that this is your first impression with us and, therefore, it will also weigh the most when deciding whether or not to grant you access to the server. We recommend that you take your time, answer carefully, elaborate as much as you can, and be honest when answering the questions.\n\n"
+                f"We are mainly looking for people who already have at least some familiarity with the style of gameplay, although we do not require advanced knowledge unless you want to focus on redstone design or decoration. Our main goal is to have a good time. Remember, this is not an exam.")]
 
     return embeds
 
@@ -26,7 +27,8 @@ def apply_es_embed() -> list[discord.Embed]:
             colour = 0x9BBEC8,
             description = 
                 f'Para ello, te pediremos que rellenes un formulario al cual podrás acceder luego de crear un ticket usando el boton `Tickets`. Una vez hayas enviado tu formulario, podrás usar el ticket para responder las preguntas de los entrevistadores.\n\n'
-                f'Ten en cuenta que esta es tu primera impresión hacia nosotros y, por tanto, es también la que pesará más al momento de dirimir si te damos acceso o no al servidor. Te recomendamos que te tomes tu tiempo, que respondas con cuidado y que trates de explayarte lo más que puedas en tus respuestas.')]
+                f'Ten en cuenta que esta es tu primera impresión hacia nosotros y, por tanto, es también la que pesará más al momento de decidir si te damos acceso o no al servidor. Te recomendamos que te tomes tu tiempo, que respondas con cuidado, que te explayes lo más que puedas y que seas sincero al responder las preguntas.\n\n'
+                f'Nosotros buscamos principalmente gente que ya conozca más o menos el estilo de juego, aunque no exigimos conocimientos avanzados salvo que quieras dedicarte a diseñar en redstone o decorar. Lo principal para nosotros es pasarla bien. Recuerda que esto no es un examen.')]
     
     return embeds
 
@@ -44,7 +46,7 @@ def banner_en_embed():
     embed = discord.Embed(
             title = 'AeternumSMP',
             colour = 0x2f3136,
-            description = 'Aeternum is a technical/decorative Minecraft server where we aim to have a good time and undertake great projects.')\
+            description = 'Aeternum is a technical/decorative Minecraft server where our main goal is to have a good time.')\
         .add_field(name = 'Can I join Aeternum?', inline = False,value =
             'Certainly! Press the `Apply` button and follow the instructions.')\
         .add_field(name= 'Do you use mods in Aeternum?', inline = False, value =
@@ -54,18 +56,85 @@ def banner_en_embed():
         .add_field(name = 'Aeternum Links', inline = True, value =
             f'{config["Emoji Overviewer"]} [Overviewer]({config["Link Overviewer"]})\n'
             f'{config["Emoji YouTube"]} [YouTube]({config["Link YouTube"]})\n'
+            f'{config["Emoji Patreon"]} [Patreon]({config["Link Patreon"]})\n'
             f'{config["Emoji Discord"]} [Discord]({config["Discord Invite"]})\n'
             f'{config["Emoji Twitter"]} [Twitter]({config["Link Twitter"]})\n'
+            f'{config["Emoji TikTok"]} [TikTok]({config["Link TikTok"]})\n'
             f'{config["Emoji Twitch"]} [Twitch]({config["Link Twitch"]})\n')\
         .add_field(name = 'Information', inline = True, value=
             f'Active Time: {active_days}\n'
             f'Foundation: {config["Foundation Date"].replace("-","/")}\n'
-            f'Version: 1.20.1\n')\
+            f'Version: Java 1.21.4\n'
+            f'Premium: Yes\n')\
         .set_thumbnail(url = config['Thumbnail'])\
 
     return embed
 
-def banner_es_embed():
+def other_discords() -> discord.Embed :
+    embed = discord.Embed(
+        title="Otros Discords",
+        color=0x2f3136,
+    )
+
+    for category, groups in friends_config['Discords'].items():
+        items = list(groups.items())
+        col1 = "\n".join(f"[{name}]({url})" for idx, (name, url) in enumerate(items) if idx % 3 == 0)
+        col2 = "\n".join(f"[{name}]({url})" for idx, (name, url) in enumerate(items) if idx % 3 == 1)
+        col3 = "\n".join(f"[{name}]({url})" for idx, (name, url) in enumerate(items) if idx % 3 == 2)
+
+        embed.add_field(name=f"**{category}**", value=col1, inline=True)
+        embed.add_field(name="\u200b", value=col2, inline=True)
+        embed.add_field(name="\u200b", value=col3, inline=True)
+
+        embed.add_field(name="", value="", inline=False)
+    
+    return embed
+
+
+def members_embed() -> discord.Embed:
+    df = pd.read_csv(members_list_path)
+
+    df['display'] = df.apply(
+        lambda row: (
+            f"<:{row['member']}:{row['emoji_id']}> "
+            f"[{row['member']}](https://discord.com/channels/839325517529612348/{row['thread_id']})"
+            if row['thread_id'] != 0
+            else f"<:{row['member']}:{row['emoji_id']}>"
+        ),
+        axis=1
+    )
+
+    embed = discord.Embed(
+        title="Miembros",
+        color=0x2f3136
+    )
+
+    col1 = "\n \n".join(df['display'][i] for i in range(len(df)) if i % 3 == 0)
+    col2 = "\n \n".join(df['display'][i] for i in range(len(df)) if i % 3 == 1)
+    col3 = "\n \n".join(df['display'][i] for i in range(len(df)) if i % 3 == 2)
+
+    embed.add_field(name="", value=col1, inline=True)
+    embed.add_field(name="", value=col2, inline=True)
+    embed.add_field(name="", value=col3, inline=True)
+
+    return embed
+
+def autoroles_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title = "Autoroles",
+        description = 
+            "Pulsa los botones de abajo para **suscribirte** o **desuscribirte** "
+            "de las notificaciones de la categoría que quieras.",
+        color = 0x2f3136
+    )
+
+    for nombre, descripcion in autoroles_categories.items():
+        embed.add_field(name=nombre, value=descripcion, inline=True)
+    embed.add_field(name='', value='', inline=True)
+
+    return embed
+
+def banner_es_embed() -> discord.Embed:
     years = int(((datetime.today()-datetime.strptime(config['Foundation Date'], "%Y-%m-%d")).days)//365.25)
     days = int((datetime.today()-datetime.strptime(config['Foundation Date'], "%Y-%m-%d")).days%365.25)
     
@@ -79,7 +148,7 @@ def banner_es_embed():
     embed = discord.Embed(
             title = 'AeternumSMP',
             colour = 0x2f3136,
-            description = 'Aeternum es un servidor de Minecraft técnico/decorativo donde búscamos pasarla bien y llevar a cabo grandes proyectos.')\
+            description = 'Aeternum es un servidor de Minecraft técnico/decorativo donde principalmente búscamos pasarla bien.')\
         .add_field(name = '¿Puedo entrar a Aeternum?', inline = False, value = 
             '¡Claro! Presiona el botón `Apply` y sigue las indicaciones.')\
         .add_field(name = '¿Usan mods en Aeternum?', inline = False, value =
@@ -89,13 +158,16 @@ def banner_es_embed():
         .add_field(name = 'Links de Aeternum', inline = True, value =
             f'{config["Emoji Overviewer"]} [Overviewer]({config["Link Overviewer"]})\n'
             f'{config["Emoji YouTube"]} [YouTube]({config["Link YouTube"]})\n'
+            f'{config["Emoji Patreon"]} [Patreon]({config["Link Patreon"]})\n'
             f'{config["Emoji Discord"]} [Discord]({config["Discord Invite"]})\n'
             f'{config["Emoji Twitter"]} [Twitter]({config["Link Twitter"]})\n'
+            f'{config["Emoji TikTok"]} [TikTok]({config["Link TikTok"]})\n'
             f'{config["Emoji Twitch"]} [Twitch]({config["Link Twitch"]})\n')\
         .add_field(name = 'Información', inline = True, value =
             f'Tiempo activo: {active_days}\n'
             f'Fundación: {config["Foundation Date"].replace("-","/")}\n'
-            f'Versión: 1.20.1\n')\
+            f'Versión: Java 1.21.4\n'
+            f'Premium: Sí\n')\
         .set_thumbnail(url = config['Thumbnail'])\
         .set_footer(text = 'English version available on `En` button.')
 
