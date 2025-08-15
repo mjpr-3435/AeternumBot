@@ -53,7 +53,6 @@ class mdaddon():
         
         await self.client.tree.sync()
 
-
         ### Banners ###
         from Banners.MembersInfo.Creator import members_creator, members_extras
         asyncio.create_task(members_extras          (self.client))
@@ -80,7 +79,7 @@ class mdaddon():
             try:
                 importlib.reload(sys.modules[mod])
             except:
-                pass
+                sys.modules.pop(mod, None)
             
     def       manage_mdplugins          (self):
         available_mdplugins = os.listdir(os.path.join(self.client.path_addons, 'mdplugins'))

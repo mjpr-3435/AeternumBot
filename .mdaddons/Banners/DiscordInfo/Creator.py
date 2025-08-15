@@ -51,7 +51,7 @@ async def discord_extras(client: McDisClient):
     await load(client)
 
     extensions = ["Banners.DiscordInfo.Behaviours",
-                  "Banners.DiscordInfo.MemberListCommand"]
+                  "Banners.DiscordInfo.MembersListCommand"]
     
     for extension in extensions:
         if extension in client.extensions:

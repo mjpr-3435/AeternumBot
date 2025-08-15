@@ -146,7 +146,7 @@ def remove_from_whitelist(nickname: str) -> str:
 
 def update_whitelist_on_servers(client:McDisClient):
     for server in client.servers:
-        if server.name == 'Patreon': continue
+        if server.name.lower() == 'overviewer': continue
         server_whitelist_path = os.path.join(server.path_files, 'server', 'whitelist.json')
 
         shutil.copy2(whitelist_path, server_whitelist_path)

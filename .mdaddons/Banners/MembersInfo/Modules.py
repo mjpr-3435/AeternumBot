@@ -17,7 +17,7 @@ from discord.app_commands import describe, choices, Choice
 from discord.ext import commands
 from datetime import datetime
 
-tasks_log = os.path.join(os.path.dirname(__file__), 'TasksLog.csv')
+tasks_log = os.path.join(os.path.dirname(__file__), 'TaskLog.csv')
 whitelist_log = os.path.join(os.path.dirname(__file__), 'WhitelistLog.csv')
 whitelist_path = os.path.join(os.path.dirname(__file__), 'Whitelist.json')
 

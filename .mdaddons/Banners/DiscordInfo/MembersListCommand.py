@@ -7,7 +7,7 @@ class MemberListCommand(commands.Cog):
         self.client = client
         
         @client.tree.command(
-            name = 'MembersList', 
+            name = 'members_list', 
             description = 'Administra los miembros del servidor.',
             extras = {'rank' : 3})
 
@@ -16,7 +16,7 @@ class MemberListCommand(commands.Cog):
         @describe(emoji_id      = 'ID del emoji del miembro (opcional)')
         @choices (action        = [Choice(name = i, value = i) for i in ['Add', 'Remove']])
 
-        async def task_command(interaction: discord.Interaction, name : str, action: Choice[str], emoji_id: int = None):
+        async def task_command(interaction: discord.Interaction, name : str, action: Choice[str], emoji_id: str = None):
             if not isAdmin(interaction.user):
                 await interaction.response.send_message('✖ No tienes permisos.', ephemeral = True, delete_after = 1)
                 return
@@ -34,8 +34,8 @@ class MemberListCommand(commands.Cog):
                 df = pd.read_csv(members_list_path)
 
                 nueva_fila = {
-                    "name": name.strip(),
-                    "emojji_id": emoji_id,
+                    "member": name.strip(),
+                    "emoji_id": int(emoji_id.strip()),
                     "thread_id": member_thread.id
                 }
 
@@ -48,7 +48,7 @@ class MemberListCommand(commands.Cog):
 
             elif action.value == 'Remove':
                 df = pd.read_csv(members_list_path)
-                df = df.loc[df['name'] != name.strip()]
+                df = df.loc[df['member'] != name.strip()]
                 df.to_csv(members_list_path, index=False)
 
                 await discord_creator(interaction.client)
