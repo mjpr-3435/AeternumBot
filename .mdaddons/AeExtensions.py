@@ -2,6 +2,7 @@ import discord
 import asyncio
 import shutil
 import importlib
+import traceback
 import sys
 import os
 
@@ -80,6 +81,7 @@ class mdaddon():
                 importlib.reload(sys.modules[mod])
             except:
                 sys.modules.pop(mod, None)
+                traceback.print_exc()
             
     def       manage_mdplugins          (self):
         available_mdplugins = os.listdir(os.path.join(self.client.path_addons, 'mdplugins'))
