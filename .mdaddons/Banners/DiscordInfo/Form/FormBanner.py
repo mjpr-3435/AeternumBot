@@ -3,7 +3,10 @@ from ..Modules import *
 def form_banner_embed(client: commands.Bot) -> discord.Embed:
     banner = discord.Embed(
     title='> Formulario',
-    description='¡Hola y bienvenido al sistema de formularios del servidor! A continuación te  explicaremos cómo postularte:',
+    description=(
+            '¡Hola y bienvenido al sistema de formularios del servidor! A continuación te explicaremos cómo postularte:\n\n'
+            '`         Recuerda que el servidor es Premium.         `'
+        ),
     colour=0x2f3136,
     timestamp=datetime.now()
     ).add_field(

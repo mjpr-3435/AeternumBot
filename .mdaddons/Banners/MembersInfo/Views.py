@@ -58,6 +58,7 @@ class AddNicknameModal(discord.ui.Modal, title = "Agregar a la Whitelist"):
 
         embed = make_embed(interaction.client, 'Usuario añadido.', nickname, interaction.user.mention)
         await interaction.followup.send(embed=embed)
+        await interaction.followup.edit_message(message_id=interaction.message.id, embed = whitelist_embed())
 
         channel = interaction.client.get_channel(config['Channel ID'])
         whitelist_log_thread = await thread('Whitelist Log', channel)
@@ -88,6 +89,7 @@ class RemoveNicknameModal(discord.ui.Modal, title = "Remover de la Whitelist"):
 
         embed = make_embed(interaction.client, 'Usuario removido.', nickname, interaction.user.mention)
         await interaction.followup.send(embed=embed)
+        await interaction.followup.edit_message(message_id=interaction.message.id, embed = whitelist_embed())
 
         channel         = interaction.client.get_channel(config['Channel ID'])
         whitelist_log_thread   = await thread('Whitelist Log', channel)

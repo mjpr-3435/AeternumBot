@@ -9,28 +9,47 @@ def apply_en_embed() -> list[discord.Embed]:
         discord.Embed(
             title ='Form',
             colour = 0x9BBEC8,
-            description =
-                f"To do this, we will ask you to fill out a form, which you can access after creating a ticket using the `Tickets` button. Once you have submitted your form, you can use the ticket to answer the interviewers’ questions.\n\n"
-                f"Keep in mind that this is your first impression with us and, therefore, it will also weigh the most when deciding whether or not to grant you access to the server. We recommend that you take your time, answer carefully, elaborate as much as you can, and be honest when answering the questions.\n\n"
-                f"We are mainly looking for people who already have at least some familiarity with the style of gameplay, although we do not require advanced knowledge unless you want to focus on redstone design or decoration. Our main goal is to have a good time. Remember, this is not an exam.")]
+            description = (
+                'To do this, we will ask you to fill out a form that you can access after creating a ticket using the `Tickets` button. '
+                'Once you have submitted your form, you can use the ticket to answer the interviewers’ questions.\n\n'
+                'Keep in mind that this is your first impression with us, and therefore it will weigh the most when deciding whether or not you are granted access to the server. '
+                'We recommend that you take your time, answer carefully, elaborate as much as you can, and be honest when responding to the questions.\n\n'
+                'It is important to note that you will not be able to join the server without having at least one voice conversation with us first. '
+                'Therefore, having a microphone is mandatory in order to complete the process.\n\n'
+                'We mainly look for people who are already somewhat familiar with the playstyle, although we do not require advanced knowledge unless you want to focus on redstone or building. '
+                'What matters most to us is having a good time. Remember, this is not an exam.'
+            ))]
 
     return embeds
 
 def apply_es_embed() -> list[discord.Embed]:
     embeds = [
-        discord.Embed(
+        discord.Embed(  
             title = 'Aplicar al servidor',
             colour = 0xDDF2FD,
-            description = f'Ingresar a Aeternum significa que pasarás a ser parte de nuestra comunidad interna y que tendrás acceso a nuestro mapa, es por ello que nos gustaría conocerte mejor antes de permitirte ingresar a los mismos.'),
+            description = (
+                'Ingresar a Aeternum significa que pasarás a ser parte de nuestra comunidad interna y que tendrás acceso a nuestro mapa, '
+                'es por ello que nos gustaría conocerte mejor antes de permitirte ingresar a los mismos.'
+            )
+        ),
         discord.Embed(
             title = 'Formulario', 
             colour = 0x9BBEC8,
-            description = 
-                f'Para ello, te pediremos que rellenes un formulario al cual podrás acceder luego de crear un ticket usando el boton `Tickets`. Una vez hayas enviado tu formulario, podrás usar el ticket para responder las preguntas de los entrevistadores.\n\n'
-                f'Ten en cuenta que esta es tu primera impresión hacia nosotros y, por tanto, es también la que pesará más al momento de decidir si te damos acceso o no al servidor. Te recomendamos que te tomes tu tiempo, que respondas con cuidado, que te explayes lo más que puedas y que seas sincero al responder las preguntas.\n\n'
-                f'Nosotros buscamos principalmente gente que ya conozca más o menos el estilo de juego, aunque no exigimos conocimientos avanzados salvo que quieras dedicarte a diseñar en redstone o decorar. Lo principal para nosotros es pasarla bien. Recuerda que esto no es un examen.')]
+            description = (
+                'Para ello, te pediremos que rellenes un formulario al cual podrás acceder luego de crear un ticket usando el botón `Tickets`. '
+                'Una vez hayas enviado tu formulario, podrás usar el ticket para responder las preguntas de los entrevistadores.\n\n'
+                'Ten en cuenta que esta es tu primera impresión hacia nosotros y, por tanto, es también la que pesará más al momento de decidir si te damos acceso o no al servidor. '
+                'Te recomendamos que te tomes tu tiempo, que respondas con cuidado, que te explayes lo más que puedas y que seas sincero al responder las preguntas.\n\n'
+                'Es importante señalar que no podrás ingresar al servidor sin antes tener al menos una conversación de voz con nosotros. '
+                'Por lo tanto, es indispensable contar con micrófono para poder completar el proceso.\n\n'
+                'Nosotros buscamos principalmente gente que ya conozca más o menos el estilo de juego, aunque no exigimos conocimientos avanzados salvo que quieras dedicarte a diseñar en redstone o decorar. '
+                'Lo principal para nosotros es pasarla bien. Recuerda que esto no es un examen.'
+            )
+        )
+    ]
     
     return embeds
+
 
 def banner_en_embed():
     years = int(((datetime.today()-datetime.strptime(config['Foundation Date'], "%Y-%m-%d")).days)//365.25)
