@@ -11,7 +11,7 @@ class banner_views(discord.ui.View):
     async def whitelist_button(self, interaction:discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(embed= whitelist_embed(), view = WhitelistListView(), ephemeral = True)
 
-    @discord.ui.button(label = 'Proyectos',
+    """@discord.ui.button(label = 'Proyectos',
                        style = discord.ButtonStyle.gray)
     async def proyectos_button(self, interaction:discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(embeds = proyectos_embed(), ephemeral = True)
@@ -24,8 +24,7 @@ class banner_views(discord.ui.View):
     @discord.ui.button(label = 'Decoraciones',
                        style = discord.ButtonStyle.gray)
     async def decoraciones_button(self, interaction:discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message(embeds = decoraciones_embed(), ephemeral = True)
-
+        await interaction.response.send_message(embeds = decoraciones_embed(), ephemeral = True)"""
 
 class AddNicknameModal(discord.ui.Modal, title = "Agregar a la Whitelist"):
     nickname = discord.ui.TextInput(
