@@ -26,10 +26,7 @@ class mdplugin():
 
         zips = [x for x in os.listdir(self.reg_bkps_dir) if x.endswith('.zip')]
 
-        if not player in self.server.admins:
-            return
-        
-        elif self.server.is_command(message, 'mdhelp'):
+        if self.server.is_command(message, 'mdhelp'):
             self.server.show_command(player, 'rb help'           , 'Muestra los comandos del regional backup.')
 
         elif self.server.is_command(message, 'rb help'):
@@ -40,9 +37,12 @@ class mdplugin():
             self.server.show_command(player, 'rb mk-bkp <name>'  , 'Crea un reg-bkp <name>.zip con las regiones añadidas.')
             self.server.show_command(player, 'rb update <name>'  , 'Actualiza el reg-bkp <name>.zip reimportando regiones.')
             self.server.show_command(player, 'rb bkps'           , 'Lista los backups creados.')
+            
+            if not player in self.server.admins: return
             self.server.show_command(player, 'rb load-bkp <name>', 'Carga el reg-bkp <name>.zip.')
             self.server.show_command(player, 'rb del-bkp <name>' , 'Elimina el reg-bkp <name>.zip.')
             self.server.show_command(player, 'rb confirm'        , 'Confirma la carga del reg-bkp específicado.')
+
 
         elif self.server.is_command(message, 'rb add'):
             raw_pos = await self.server.get_data(player, 'Pos')
@@ -71,6 +71,55 @@ class mdplugin():
                             self.files_to_zip[player][dim].remove(reg)
                 self.show_list(player)
         
+        elif self.server.is_command(message, 'rb list'):
+            self.show_list(player)
+        
+        elif self.server.is_command(message, 'rb bkps'):
+            self.show_bkps(player)
+
+        elif self.server.is_command(message, 'rb clear'):
+            self.files_to_zip[player] = {'overworld':[],
+                                    'the_nether':[],
+                                    'the_end':[]}
+            self.show_list(player)
+
+        elif self.server.is_command(message, 'rb mk-bkp'):
+            name = message.removeprefix(f'{self.server.prefix}rb mk-bkp').strip()
+            self.reg_bkps_dir = os.path.join(self.server.path_plugins, 'reg-bkps')
+
+            if  not self.files_to_zip[player] or \
+                not self.files_to_zip[player]['overworld']  +\
+                    self.files_to_zip[player]['the_nether'] +\
+                    self.files_to_zip[player]['the_end']: 
+                self.server.send_response(player, '✖ No has agregado ninguna región.')
+                return
+            elif not name: 
+                self.server.send_response(player, '✖ Debes proveer un nombre.')
+                return
+            elif self.creating_bkp: 
+                self.server.send_response(player, '✖ Alguien más está creando un backup ahorita.')
+                return
+            
+            self.creating_bkp = True
+            
+            await self.make_reg_bkp(player, name)
+
+        elif self.server.is_command(message, 'rb update'):
+            name = message.removeprefix(f'{self.server.prefix}rb update').strip()
+
+            if not name or not name + '.zip' in zips: 
+                self.server.send_response(player, '✖ Debes proveer un nombre en la lista.')
+                return
+            elif self.creating_bkp: 
+                self.server.send_response(player, '✖ Alguien más está creando un backup ahorita.')
+                return
+
+            self.creating_bkp = True
+            
+            await self.update_reg_bkp(player, name)
+
+        elif not player in self.server.admins and self.server.name == 'SMP': return
+
         elif self.server.is_command(message, 'rb load-bkp'):
             zip = message.removeprefix(f'{self.server.prefix}rb load-bkp').strip() + '.zip'
 
@@ -113,51 +162,6 @@ class mdplugin():
             else:
                 self.server.send_response(player, '✖ No hay un reg-bkp con ese nombre.')
 
-        elif self.server.is_command(message, 'rb list'):
-            self.show_list(player)
-        
-        elif self.server.is_command(message, 'rb bkps'):
-            self.show_bkps(player)
-
-        elif self.server.is_command(message, 'rb clear'):
-            self.files_to_zip[player] = {'overworld':[],
-                                    'the_nether':[],
-                                    'the_end':[]}
-            self.show_list(player)
-
-        elif self.server.is_command(message, 'rb mk-bkp'):
-            name = message.removeprefix(f'{self.server.prefix}rb mk-bkp').strip()
-
-            if  not self.files_to_zip[player] or \
-                not self.files_to_zip[player]['overworld']  +\
-                    self.files_to_zip[player]['the_nether'] +\
-                    self.files_to_zip[player]['the_end']: 
-                self.server.send_response(player, '✖ No has agregado ninguna región.')
-                return
-            elif not name: 
-                self.server.send_response(player, '✖ Debes proveer un nombre.')
-                return
-            elif self.creating_bkp: 
-                self.server.send_response(player, '✖ Alguien más está creando un backup ahorita.')
-                return
-
-            self.creating_bkp = True
-            
-            await self.make_reg_bkp(player, name)
-
-        elif self.server.is_command(message, 'rb update'):
-            name = message.removeprefix(f'{self.server.prefix}rb update').strip()
-
-            if not name or not name + '.zip' in zips: 
-                self.server.send_response(player, '✖ Debes proveer un nombre en la lista.')
-                return
-            elif self.creating_bkp: 
-                self.server.send_response(player, '✖ Alguien más está creando un backup ahorita.')
-                return
-
-            self.creating_bkp = True
-            
-            await self.update_reg_bkp(player, name)
 
     async def   listener_events(self, log : str):
         if not 'INFO]:' in log: 

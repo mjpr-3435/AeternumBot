@@ -12,10 +12,7 @@ class mdplugin():
         self.action_confirmed       = False
 
     async def on_player_command(self, player: str, message: str):
-        if not player in self.server.admins:
-            return
-        
-        elif self.server.is_command(message, 'mdhelp'):
+        if self.server.is_command(message, 'mdhelp'):
             self.server.show_command(player, 'ru help'           , 'Muestra los comandos del region updater.')
 
         elif self.server.is_command(message, 'ru help'):

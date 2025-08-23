@@ -14,11 +14,10 @@ class mdaddon():
         self.persistent_tasks     = []
         self.config_mdplugins = \
             {   'SMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'execute.py', 'reg-bkps.py', 'scoreboard.py', 'tts_addon.py'],
-                'CMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'op.py', 'tts_addon.py'                                     ],
+                'CMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'op.py', 'reg-bkps.py', 'tts_addon.py'],
                 'MMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'op.py', 'reg-updater.py', 'tts_addon.py'                   ],
-                'PMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'here.py', 'tts_addon.py'],
-                'Dummy'         : ['manager.py', 'chatbridge.py', 'calc.py', 'here.py', 'tts_addon.py', 'dummy_manager.py'],
-                'SMP 1.12'      : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'execute.py', 'reg-bkps.py', 'scoreboard.py', 'tts_addon.py']
+                'PMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'here.py', 'tts_addon.py', 'reg-updater.py'],
+                'Dummy'         : ['manager.py', 'chatbridge.py', 'calc.py', 'here.py', 'tts_addon.py', 'dummy_manager.py']
                 }
         
         ### Load Bot Related ###
