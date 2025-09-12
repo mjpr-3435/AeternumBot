@@ -38,7 +38,7 @@ class mdplugin():
             self.server.show_command(player, 'rb update <name>'  , 'Actualiza el reg-bkp <name>.zip reimportando regiones.')
             self.server.show_command(player, 'rb bkps'           , 'Lista los backups creados.')
             
-            if not player in self.server.admins: return
+            if not player in self.server.admins and self.server.name == 'SMP': return
             self.server.show_command(player, 'rb load-bkp <name>', 'Carga el reg-bkp <name>.zip.')
             self.server.show_command(player, 'rb del-bkp <name>' , 'Elimina el reg-bkp <name>.zip.')
             self.server.show_command(player, 'rb confirm'        , 'Confirma la carga del reg-bkp específicado.')
