@@ -35,6 +35,7 @@ autoroles_ids = {
 
 config = {      
     'Thumbnail'         : 'https://i.postimg.cc/XqQx5rT5/logo.png',
+    'Image Patreon'     : 'https://i.imgur.com/jFlgyvR.png',
     'Discord Invite'    : 'https://discord.gg/pXwV7BWd2P',
     'Link YouTube'      : 'https://www.youtube.com/channel/UCjjMAJirU2oWOrQPwGsDxYw',
     'Link Patreon'      : 'https://www.patreon.com/Aeternum_SMP',
@@ -51,7 +52,10 @@ config = {
     'Emoji TikTok'      : '<:AeTikTok:1403595577895161978>',
     'Emoji Overviewer'  : '🌐',
     'Foundation Date'   : '2021-05-12',
-    'Channel ID'        : 866452465879744532}
+    'Channel ID'        : 866452465879744532,
+    'Extras ID'         : 1423062831569436712,
+    'Aecademy ID'       : 1423058606382645489,
+    'Showcase ID'       : 1423053488900014091}
     
 config_form = {      
     'Thumbnail'     : 'https://i.postimg.cc/XqQx5rT5/logo.png',
@@ -116,4 +120,22 @@ friends_config = {
             'https://discord.gg/PXRBwWXqGc'
         }
     }
+}
+
+showcase_config = {
+    'xp_farm':' Granja de XP',
+    'raid_farm': 'Granja de Raids',
+    'bat_switch': 'Bat Switch',
+    'blaze_farm': 'Granja de Blazes',
+    'main_storage': 'Almacén General',
+    'slime_farm': 'Granja de Slimes',
+    'museum': 'Museo',
+    'deltanor': 'Granja de Magma',
+    'christmas_day': 'Deco de Navidad',
+    'nether_hub': 'Nether Hub',
+    'spider_farm': 'Granja de Arañas',
+    'honey_farm': 'Granja de Miel',
+    'guardian_farm': 'Granja de Guardianes',
+    'gold_farm': 'Granja de Oro',
+    '200_millones': '200 Millones'
 }

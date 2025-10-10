@@ -11,12 +11,12 @@ class banner_views(discord.ui.View):
     async def whitelist_button(self, interaction:discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(embed= whitelist_embed(), view = WhitelistListView(), ephemeral = True)
 
-    """@discord.ui.button(label = 'Proyectos',
+    @discord.ui.button(label = 'Server Jobs',
                        style = discord.ButtonStyle.gray)
-    async def proyectos_button(self, interaction:discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message(embeds = proyectos_embed(), ephemeral = True)
+    async def apoyo_button(self, interaction:discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message(embeds = apoyo_embed(), ephemeral = True)
 
-    @discord.ui.button(label = 'Perímetros',
+    """@discord.ui.button(label = 'Perímetros',
                        style = discord.ButtonStyle.gray)
     async def perimetros_button(self, interaction:discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(embeds = perimetros_embed(), ephemeral = True)

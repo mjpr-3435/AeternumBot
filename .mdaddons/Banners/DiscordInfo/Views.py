@@ -94,8 +94,6 @@ class banner_es_views(discord.ui.View):
             response = await interaction.followup.send(f'Ticket creado <#{ticket.id}>.')
             await response.delete(delay = 60)
 
-import discord
-
 class autoroles_views(discord.ui.View):
     def __init__(self, guild: discord.Guild):
         super().__init__(timeout=None)
@@ -149,3 +147,40 @@ class autoroles_views(discord.ui.View):
     @discord.ui.button(label=" 0", style=discord.ButtonStyle.gray, emoji="📮", custom_id="todo")
     async def btn_todo(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.toggle_role(interaction, "todo", button)
+
+
+class PatreonMenu(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(PatreonSelect())
+
+class PatreonSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label='Aecademy', description='Información sobre Aecademy'),
+            discord.SelectOption(label='Maparts', description='Información sobre Maparts'),
+            discord.SelectOption(label='Tours', description='Información sobre Tours'),
+            discord.SelectOption(label='Hosting', description='Información sobre Hosting'),
+            discord.SelectOption(label='Reboot', description='Información sobre Reboot'),
+        ]
+        super().__init__(placeholder='Elige una opción para ver más detalles...', min_values=1, max_values=1, options=options)
+
+
+    async def callback(self, interaction: discord.Interaction):
+        opcion = self.values[0]
+
+        if opcion == 'Aecademy':
+            embed = embed_aecademy()
+        elif opcion == 'Maparts':
+            embed = embed_maparts()
+        elif opcion == 'Tours':
+            embed = embed_tours()
+        elif opcion == 'Hosting':
+            embed = embed_hosting()
+        elif opcion == 'Reboot':
+            embed = embed_reboot()
+        else:
+            embed = discord.Embed(title="Opción no reconocida")
+
+        embed.set_thumbnail(url = config['Thumbnail'])
+        await interaction.response.send_message(embed=embed, ephemeral=True)

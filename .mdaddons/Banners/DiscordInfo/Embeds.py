@@ -50,7 +50,6 @@ def apply_es_embed() -> list[discord.Embed]:
     
     return embeds
 
-
 def banner_en_embed():
     years = int(((datetime.today()-datetime.strptime(config['Foundation Date'], "%Y-%m-%d")).days)//365.25)
     days = int((datetime.today()-datetime.strptime(config['Foundation Date'], "%Y-%m-%d")).days%365.25)
@@ -137,6 +136,18 @@ def members_embed() -> discord.Embed:
     embed.add_field(name="", value=col3, inline=True)
 
     return embed
+
+def patreon_embed() -> discord.Embed:
+    embed = discord.Embed(
+        title="Apóyanos en Patreon",
+        description="Si te gusta Aeternum y quieres ayudarnos a mantener y mejorar el servidor, puedes apoyarnos en Patreon. ¡Cada aporte cuenta!",
+        colour=0xFF424D
+    )
+    embed.set_image(url="https://media.discordapp.net/attachments/1363023389681385544/1425632876287889612/image.png?ex=68e84b94&is=68e6fa14&hm=3ca4fb3ed3174ba4912ba856e7b8e74f85633d732f245733ef277de8439f58d4&=&format=webp&quality=lossless&width=1524&height=800")
+    embed.set_footer(text="Gracias por apoyar a Aeternum ❤️")
+
+    return embed
+
 
 def autoroles_embed() -> discord.Embed:
     embed = discord.Embed(
@@ -289,3 +300,118 @@ def rules_es_embed() -> list[discord.Embed]:
             .set_footer(text='Incumplir cualquiera de estas normas puede conllevar a tu baneo del servidor.')]
     
     return embeds
+
+
+def patreon_embed() -> discord.Embed:
+    years = (datetime.today() - datetime.strptime(config['Foundation Date'], "%Y-%m-%d")).days / 365.25
+    active_days = f"{years:.1f} años"
+
+
+    embed = discord.Embed(
+        title="Aeternum Patreon",
+        description=f"""
+Si quieres ayudarnos a mantener y mejorar el servidor, puedes apoyarnos en `Patreon`. Allí encontrarás diferentes opciones que podrían interesarte:
+
+- **Aecademy:** acceso a un servidor de enseñanza, con el mismo estilo que nuestro SMP, pensado para aprender Minecraft técnico.
+- **Maparts personalizados:** envíanos una imagen y la convertimos en un mapart dentro de nuestro mundo.  
+- **Reinicio del mundo:** puedes comprar el mapa actual ({active_days} de desarrollo) y nosotros comenzamos uno nuevo desde cero.  
+- **Tours privados:** recorridos guiados por nuestro mapa principal, con decoraciones y redstone avanzada.  
+- **Hosting:** servidores configurados como el nuestro, listos para que montes tu propio servidor técnico.
+
+Puedes ver los detalles de cada opción en nuestro Patreon o en el menú desplegable de abajo.
+
+[{config['Emoji Patreon']} [Aeternum Patreon]]({config['Link Patreon']})""",
+        colour=0x2f3136
+    )
+    embed.set_image(url=config["Image Patreon"])
+
+    return embed
+
+def embed_aecademy() -> discord.Embed:
+    embed = discord.Embed(
+        title="Aecademy (3.5$ - 12$)",
+        description=(
+            "Aecademy es un servidor privado con el mismo estilo que nuestro SMP principal. "
+            "Está orientado a jugadores que desean aprender Minecraft técnico desde cero y conocer a otros con quienes formar su propio SMP. "
+            "El mapa se reinicia cada año y, al finalizar la temporada, se entrega una copia completa a todos los miembros activos de Aecademy.\n\n"
+            "El acceso es gratuito durante el primer mes y luego pasa a ser de pago; puedes adquirir cupos a través de nuestro Patreon.\n\n"
+            "**Más información:**\n<#1423058606382645489>"
+        ),
+        colour=0x2f3136
+    )
+    return embed
+
+
+def embed_maparts() -> discord.Embed:
+    embed = discord.Embed(
+        title="Maparts personalizados (5$ - 20$)",
+        description=(
+            "Puedes enviarnos cualquier imagen, y nosotros la convertimos en un `Mapart` dentro de nuestro mundo. "
+            "El proceso se realiza manualmente, con materiales obtenidos en survival técnico. "
+            "Es una forma de dejar tu marca dentro de Aeternum."
+        ),
+        colour=0x2f3136
+    )
+    return embed
+
+
+def embed_tours() -> discord.Embed:
+    embed = discord.Embed(
+        title="Tours privados (10$ - 20$)",
+        description=(
+            "Ofrecemos recorridos guiados por nuestro mapa principal. "
+            "Durante el tour mostramos sistemas de redstone complejos, granjas, decoración y áreas históricas del servidor. "
+            "Ideal para quienes quieren conocer cómo funciona Aeternum por dentro."
+        ),
+        colour=0x2f3136
+    )
+    return embed
+
+def embed_hosting() -> discord.Embed:
+    embed = discord.Embed(
+        title="Aeternum Hosting (24$ - 40$)",
+        description=(
+            "Cada plan ofrece acceso a un usuario en un servidor dedicado ubicado en Alemania (**CPU i9-12900K**) "
+            "con **12 GB o 24 GB de RAM** según el plan.\n\n"
+
+            "**Beneficios por defecto:**\n"
+            "El entorno viene completamente configurado y listo para usar:\n"
+            "- Dos servidores preconfigurados (**SMP** y **CMP**).\n"
+            "- **MCDReforged** instalado en cada servidor.\n"
+            "- Servidores enlazados mediante **BungeeCord**.\n"
+            "- Panel de administración desde discord **McDis RCON**.\n"
+            "Es posible tener más servidores preconfigurados mientras se mantenga el uso de RAM dentro del límite contratado.\n\n"
+
+            "**Beneficios técnicos adicionales:**\n"
+            "- Acceso completo por **SFTP** para gestión de archivos.\n"
+            "- Posibilidad de usar **bash** directamente en el dedicado para revisar, modificar o monitorear el entorno a tu gusto.\n\n"
+        ),
+        colour=0x2f3136
+    ).add_field(
+        name="> Nota:",
+        value=(
+            "Por defecto no se incluyen plugins de **MCDReforged** (solo `Quick Backups`). "
+            "El usuario puede agregar y configurar sus propios plugins si lo desea.\n\n"
+            "El panel **McDis RCON** viene incluido y totalmente funcional; los plugins adicionales son opcionales y se cobran aparte."
+        ),
+        inline=False
+    )
+
+    
+    return embed
+
+def embed_reboot() -> discord.Embed:
+    years = (datetime.today() - datetime.strptime(config['Foundation Date'], "%Y-%m-%d")).days / 365.25
+    active_years = f"{years:.1f} años"
+
+    embed = discord.Embed(
+        title="Compra del mapa actual (4000$)",
+        description=(
+            f"Nuestro mundo actual tiene aproximadamente **{active_years} de desarrollo**. "
+            "Ofrecemos la posibilidad de comprar una copia completa del mapa y, tras ello, "
+            "comenzamos un nuevo mundo desde cero.\n\n"
+            "Sí, cuesta alrededor de `4000$`, así que más que una propuesta seria es un capricho para quien no sepa qué hacer con su dinero."
+        ),
+        colour=0x2f3136
+    )
+    return embed
