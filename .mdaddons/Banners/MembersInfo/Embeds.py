@@ -24,7 +24,7 @@ def apoyo_embed() -> list[discord.Embed]:
         ).add_field(
             name='> Cómo apoyar',
             value=(
-                "Puedes crear un ticket, comentarlo en voice o usar los canales del foro <#1403611793770938490> según tu área de interés. "
+                "Puedes crear un ticket, comentarlo en voice o usar los canales del foro <#1228482462280056943> según tu área de interés. "
                 "Todo suma, y queremos que seguir construyendo proyectos técnicos sea siempre divertido."
             ),
             inline=False

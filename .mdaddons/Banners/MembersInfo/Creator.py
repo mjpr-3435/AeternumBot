@@ -57,7 +57,7 @@ async def banner_embed(client: McDisClient) -> discord.Embed:
     years = int(((datetime.today()-datetime.strptime(config['Foundation Date'], "%Y-%m-%d")).days)//365.25)
     days = int((datetime.today()-datetime.strptime(config['Foundation Date'], "%Y-%m-%d")).days%365.25)
     channel         = client.get_channel(config['Channel ID'])
-    announcements   = await thread('Announcements', channel)
+    announcements   = await thread('Announcements', channel, public = True)
     whitelist_log   = await thread('Whitelist Log', channel, public = True)
     server_log      = await thread('Server Log', channel, public = True)
              

@@ -335,7 +335,7 @@ def embed_aecademy() -> discord.Embed:
             "Está orientado a jugadores que desean aprender Minecraft técnico desde cero y conocer a otros con quienes formar su propio SMP. "
             "El mapa se reinicia cada año y, al finalizar la temporada, se entrega una copia completa a todos los miembros activos de Aecademy.\n\n"
             "El acceso es gratuito durante el primer mes y luego pasa a ser de pago; puedes adquirir cupos a través de nuestro Patreon.\n\n"
-            "**Más información:**\n<#1423058606382645489>"
+            "Pueden encontrar información más detallada en el canal dedicado a Aecademy, <#1423058606382645489>."
         ),
         colour=0x2f3136
     )
@@ -357,7 +357,7 @@ def embed_maparts() -> discord.Embed:
 
 def embed_tours() -> discord.Embed:
     embed = discord.Embed(
-        title="Tours privados (10$ - 20$)",
+        title="Tours privados (8$ - 15$)",
         description=(
             "Ofrecemos recorridos guiados por nuestro mapa principal. "
             "Durante el tour mostramos sistemas de redstone complejos, granjas, decoración y áreas históricas del servidor. "
@@ -369,18 +369,18 @@ def embed_tours() -> discord.Embed:
 
 def embed_hosting() -> discord.Embed:
     embed = discord.Embed(
-        title="Aeternum Hosting (24$ - 40$)",
+        title="Aeternum Hosting (16$ - 40$)",
         description=(
-            "Cada plan ofrece acceso a un usuario en un servidor dedicado ubicado en Alemania (**CPU i9-12900K**) "
-            "con **12 GB o 24 GB de RAM** según el plan.\n\n"
+            "Cada plan ofrece acceso a un usuario en un servidor dedicado ubicado en Finlandia (**CPU i9-12900K**) "
+            "con **8GB, 12 GB o 24 GB de RAM** según el plan.\n\n"
 
             "**Beneficios por defecto:**\n"
             "El entorno viene completamente configurado y listo para usar:\n"
             "- Dos servidores preconfigurados (**SMP** y **CMP**).\n"
             "- **MCDReforged** instalado en cada servidor.\n"
             "- Servidores enlazados mediante **BungeeCord**.\n"
-            "- Panel de administración desde discord **McDis RCON**.\n"
-            "Es posible tener más servidores preconfigurados mientras se mantenga el uso de RAM dentro del límite contratado.\n\n"
+            "- Panel de administración desde Discord **McDis RCON**.\n"
+            "Es posible tener más servidores preconfigurados mientras se mantenga el uso de **RAM** dentro del límite contratado.\n\n"
 
             "**Beneficios técnicos adicionales:**\n"
             "- Acceso completo por **SFTP** para gestión de archivos.\n"
@@ -390,8 +390,8 @@ def embed_hosting() -> discord.Embed:
     ).add_field(
         name="> Nota:",
         value=(
-            "Por defecto no se incluyen plugins de **MCDReforged** (solo `Quick Backups`). "
-            "El usuario puede agregar y configurar sus propios plugins si lo desea.\n\n"
+            "Por defecto no se incluyen plugins de **MCDReforged** (solo `Quick Backups` y `Timed Backups`). "
+            "El usuario puede agregar y configurar sus propios plugins.\n\n"
             "El panel **McDis RCON** viene incluido y totalmente funcional; los plugins adicionales son opcionales y se cobran aparte."
         ),
         inline=False
@@ -415,3 +415,225 @@ def embed_reboot() -> discord.Embed:
         colour=0x2f3136
     )
     return embed
+
+
+def aecademy_embed() -> list[discord.Embed]:
+    color_base = 0x2F3136
+    embeds = []
+
+    general = discord.Embed(
+        title="**Aecademy SMP**",
+        colour=color_base,
+        description=(
+            "Aecademy es un servidor `por temporadas` cuyo objetivo es enseñar a las personas cómo organizar su propio servidor técnico. "
+            "El servidor está **Java 1.21.4**  y es para jugadores con el **Minecraft Premium**.\n\n"
+            "El mapa se reinicia `cada año` y, al final de la temporada, se le entregará "
+            "a todos los participantes que permanezcan hasta el último mes un enlace de descarga del mismo. "
+            "Con ese mapa podrán decidir si iniciar su propio SMP o continuar independientemente.\n\n"
+        )
+    ).add_field(
+        name="**¿Cómo entrar en Aecademy?**",
+        value=(
+            "Aecademy es gratuito durante el primer mes de la temporada. "
+            "Luego, para continuar participando, se debe apoyar al servidor de alguna manera, "
+            "ya sea a través de Patreon o realizando un boost al servidor de Discord. "
+            "Para más información selecciona `Beneficios` en el desplegable.\n\n"
+            "`       Fecha de inicio: 01 de noviembre de 2025       `\n\n" 
+            f"{config['Emoji Patreon']} [[Aeternum Patreon]]({config['Link Patreon']})"
+            ),
+        inline=False
+    ).set_image(
+        url=config['Image Patreon']
+    )
+
+    embeds.append(general)
+    return embeds
+
+def beneficios_embed() -> list[discord.Embed]:
+    embeds = []
+    beneficios_generales = discord.Embed(
+        title="🎓 Beneficios de participar en Aecademy",
+        colour=0x2f3136,
+        description=(
+            "Antes de acceder a cualquiera de los beneficios o realizar una suscripción, "
+            "es fundamental que leas los apartados de **Términos de Servicio** y **Aprendizaje y Moderación** "
+            "en el menú principal de información.\n\n"
+            "Al realizar una compra o suscripción, se asume que el participante **ha leído y acepta** "
+            "los términos y condiciones que implican participar en Aecademy.\n\n"
+            "A continuación se detallan los beneficios disponibles:"
+        )
+    )
+    beneficios_generales.add_field(
+        name="🧩 **Beneficios generales**",
+        value=(
+            "- Whitelistear gente en el servidor de Aecademy.\n"
+            "- El servidor de Aecademy incluye dos instancias: `SMP` y `CMP`, cada una con `6GB` de `RAM`, igual que los servidores de Aeternum.\n"
+            "- Ambos servidores funcionan en la misma network usando `Velocity`.\n"
+            "- Hardware de alto rendimiento con procesador `i9-12900K`, el mismo que el servidor principal de Aeternum. Los servidores están alojados en Alemania.\n"
+            "- Servidores ya configurados con mods de optimización y Carpet Mod utilizados habitualmente.\n"
+            "- Mapas preparados para sus objetivos específicos.\n"
+            "- MCDReforged configurado.\n"
+            "- McDis configurado."
+        ),
+        inline=False
+    )
+
+    beneficios_generales.add_field(
+        name=f"{config['Emoji Patreon']} **Roles de acceso**",
+        value=(
+            "Puedes apoyar a Aeternum a través de `Patreon` o `boosteando` el servidor de Discord. "
+            "Al hacerlo, recibirás automáticamente un rol que te otorga la posibilidad de **añadir jugadores** a la whitelist de Aecademy "
+            "y acceder a los beneficios mencionados en la sección anterior.\n\n"
+            "Cada nivel de apoyo ofrece ventajas distintas:"
+            ),
+        inline=False
+    )
+
+    for rol, cantidad in supporter_permissions.items():
+        role_id = next((rid for rid, name in supporter_roles.items() if name == rol), None)
+
+        beneficios_generales.add_field(
+            name='',
+            value=f'<@&{role_id}>\nPermite añadir hasta **{cantidad}** jugador{"es" if cantidad > 1 else ""}.\nPrecio: `{prices[rol]}` 💸',
+            inline=True
+        )
+
+    beneficios_generales.set_footer(
+        text=(
+            "📌 Los beneficios son acumulativos: por ejemplo, si tienes Server Booster (1) y Patreon Tier 2 (2), "
+            "podrás añadir un total de 3 jugadores.\n\n"
+            "⚠️ En el caso de Server Booster, no se otorgan beneficios adicionales por hacer varios boosts desde la misma cuenta."
+        )
+    )
+    
+    embeds.append(beneficios_generales)
+
+    return embeds
+
+def tos_embed() -> list[discord.Embed]:
+    embeds = []
+
+    tos = discord.Embed(
+        title="Términos de Servicio",
+        colour=0x2f3136,
+        description=(
+            "Por favor, lee cuidadosamente los siguientes términos antes de participar en Aecademy.\n\n"
+            "El uso del servidor de Aecademy (Discord y Minecraft) implica la aceptación de estas normas y condiciones. "
+        )
+    )
+
+    tos.add_field(
+        name="**1. Comportamiento y respeto**",
+        value=(
+            "- Está prohibido cualquier tipo de acoso, discriminación o comportamiento tóxico.\n"
+            "- Respeta a todos los miembros y al staff en todo momento.\n"
+            "- Las bromas están permitidas siempre que sean consensuadas."
+        ),
+        inline=False
+    )
+
+    tos.add_field(
+        name="**2. Contenido y comunicación**",
+        value=(
+            "- No publicar contenido NSFW o inapropiado en el servidor.\n"
+            "- Respeta los canales y utiliza el chat para su propósito correspondiente.\n"
+            "- El acceso a Aecademy requiere tener **Minecraft Premium (Java Edition)**."
+        ),
+        inline=False
+    )
+
+    tos.add_field(
+        name="**3. Formación especializada**",
+        value=(
+            "No ofrecemos clases ni respondemos preguntas de manera arbitraria, ni actuamos como un asistente automático. "
+            "Podemos brindarte orientación dentro de nuestros conocimientos, con recursos y guías para que te apoyes en tu aprendizaje.\n\n"
+            "`Redstone`: Orientación general, compartimos videos, guías, materiales y podemos evaluar tus diseños terminados.\n"
+            "`Construcción`: Consejos sobre plugins o herramientas de Axiom útiles para proyectos, además de sugerir videos y guías.\n\n"
+            "La interacción es flexible siempre que las preguntas sean razonables y tengan sentido, pero no responderemos repetidamente preguntas que se puedan resolver consultando los recursos proporcionados."
+        ),
+        inline=False
+    )
+
+    tos.add_field(
+        name="**4. Moderación y advertencias**",
+        value=(
+            "- Se aplican 3 advertencias antes de cualquier sanción.\n"
+            "- Mantén respeto y buenas prácticas en todo momento."
+        ),
+        inline=False
+    )
+
+    tos.add_field(
+        name="**5. Modificaciones y cambios**",
+        value=(
+            "- El staff se reserva el derecho de modificar las normas y el servidor.\n"
+            "- Los cambios menores podrán aplicarse en cualquier momento.\n"
+            "- Los cambios importantes se notificarán con un mes de anticipación a los miembros involucrados, y la permanencia en el servidor implicará su aceptación."
+        ),
+        inline=False
+    )
+
+    tos.add_field(
+        name="**6. Pagos y reembolsos**",
+        value=(
+            "- El acceso a los beneficios de Aecademy está sujeto a la suscripción activa en Patreon o a la permanencia del Boost de Discord.\n"
+            "- Dicho pago es final y no se realizan devoluciones bajo ningún concepto, independientemente del tiempo de uso."
+        ),
+        inline=False
+    )
+
+    tos.set_footer(
+        text="El incumplimiento de estos términos puede resultar en sanciones, incluyendo expulsión del servidor."
+    )
+
+    embeds.append(tos)
+
+    return embeds
+
+def info_aprendizaje_embed() -> list[discord.Embed]:
+    color_base = 0x2F3136
+    embeds = []
+
+    aprendizaje = discord.Embed(
+        title="**¿Qué esperar de Aecademy SMP?**",
+        colour=color_base,
+        description=(
+            "En Aecademy no solo jugarás, sino que aprenderás las bases para gestionar tu propio servidor técnico. "
+            "Durante la temporada trabajaremos juntos en distintos proyectos y roles prácticos."
+        )
+    ).add_field(
+        name="**Metas al finalizar la temporada**",
+        value=(
+            "- Aprender métodos para abrir perímetros y comprender las mecánicas básicas del juego.\n"
+            "- Aprender a organizar y gestionar proyectos.\n"
+            "- Manejar mods de Masa como `MiniHUD`, `Tweakeroo`, `Litematica`, entre otros, así como las variantes del `Carpet Mod`.\n"
+            "- Contar con las granjas esenciales y un Main Storage plenamente funcional.\n"
+            "- Formar un grupo con la capacidad de administrar un SMP a partir del mapa entregado."
+        ),
+        inline=False
+    ).add_field(
+        name="**Moderadores y administración**",
+        value=(
+            "Los participantes que demuestren compromiso y ganen la confianza del staff podrán ascender a moderadores. "
+            "Esto incluye aprender a configurar y administrar el servidor, manejar la network, "
+            "usar MCDReforged, instalar plugins, trabajar con el panel McDis y crear un bot de Discord "
+            "para mantener un servidor funcional y atractivo."
+        ),
+        inline=False
+    ).add_field(
+        name="**Conexión con Aeternum**",
+        value=(
+            "Además, compartiremos nuestras experiencias en la administración de `Aeternum` como referencia. "
+            "Los miembros de Aeternum también ingresarán ocasionalmente a Aecademy para colaborar en distintas actividades."
+        ),
+        inline=False
+    ).add_field(
+        name="**Acceso al servidor principal de Aeternum**",
+        value=(
+            "Participar en Aecademy también brinda un acceso más directo al servidor principal de Aeternum, "
+            "ya que durante la temporada iremos conociendo a los miembros y evaluando su desempeño."
+        )
+    )
+
+    embeds.append(aprendizaje)
+    return embeds

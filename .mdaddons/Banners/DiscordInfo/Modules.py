@@ -139,3 +139,24 @@ showcase_config = {
     'gold_farm': 'Granja de Oro',
     '200_millones': '200 Millones'
 }
+
+supporter_roles = {
+        852734709506375732  : 'Server Booster',
+        1423059805345419424 : 'Patreon Tier 1',
+        1423059909376737401 : 'Patreon Tier 2',
+        1423059984136278177 : 'Patreon Tier 3'
+    }
+
+supporter_permissions = {
+    'Server Booster' : 1,
+    'Patreon Tier 1' : 1,
+    'Patreon Tier 2' : 2,
+    'Patreon Tier 3' : 4
+}
+
+prices = {
+    'Server Booster': "Boost de Discord",
+    'Patreon Tier 1': " 3.5 USD",
+    'Patreon Tier 2': " 6.5 USD",
+    'Patreon Tier 3': "12.0 USD"
+}

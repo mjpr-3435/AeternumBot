@@ -184,3 +184,33 @@ class PatreonSelect(discord.ui.Select):
 
         embed.set_thumbnail(url = config['Thumbnail'])
         await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+class AecademyInfoView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        self.add_item(AecademyInfoSelect())
+
+class AecademyInfoSelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="Beneficios", description="Ver beneficios y roles de acceso"),
+            discord.SelectOption(label="Términos de Servicio", description="Ver las normas y condiciones"),
+            discord.SelectOption(label="¿Qué esperar de Aecademy?", description="Ver información sobre qué esperar de Aecademy"),
+        ]
+        super().__init__(placeholder="Elige una opción para ver más detalles…", options=options)
+
+    async def callback(self, interaction: discord.Interaction):
+        label = self.values[0]
+
+        embed_map = {
+            "Beneficios": beneficios_embed,
+            "Términos de Servicio": tos_embed,
+            "¿Qué esperar de Aecademy?": info_aprendizaje_embed
+        }
+
+        embed_func = embed_map.get(label)
+        if embed_func:
+            embeds = embed_func()
+            for e in embeds: e.set_thumbnail(url=config["Thumbnail"])
+            await interaction.response.send_message(embeds=embeds, ephemeral=True)

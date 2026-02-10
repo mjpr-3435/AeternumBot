@@ -4,9 +4,10 @@ from .Modules import *
 
 async def discord_creator(client: McDisClient, *, loop: bool = False):
     channel = client.get_channel(config['Channel ID'])
-    await extras_creator(client)
+    # await extras_creator(client)
     await showcase_creator(client)
-    await patreon_creator(client)
+    # await patreon_creator(client)
+    # await aecademy_creator(client)
 
     while True:  
         try:
@@ -65,6 +66,18 @@ async def patreon_creator(client: McDisClient):
 
     elif len(messages) == 1 and all([message.author.id == client.user.id for message in messages]):
         await messages[0].edit(embed = patreon_embed(), view = PatreonMenu())
+
+
+async def aecademy_creator(client: McDisClient):
+    channel = client.get_channel(1423058606382645489)
+    messages =  [msg async for msg in channel.history(limit = None, oldest_first = True)]
+    
+    if len(messages) == 0:
+        await channel.send(embeds = aecademy_embed(), view = AecademyInfoView())
+
+    elif len(messages) == 1 and all([message.author.id == client.user.id for message in messages]):
+        await messages[0].edit(embeds = aecademy_embed(), view = AecademyInfoView())
+
 
 async def showcase_creator(client: McDisClient):
     channel = client.get_channel(config['Showcase ID'])

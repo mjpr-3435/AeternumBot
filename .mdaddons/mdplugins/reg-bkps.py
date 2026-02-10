@@ -106,17 +106,38 @@ class mdplugin():
 
         elif self.server.is_command(message, 'rb update'):
             name = message.removeprefix(f'{self.server.prefix}rb update').strip()
+            zip_path = os.path.join(self.reg_bkps_dir, f'{name}.zip')
 
-            if not name or not name + '.zip' in zips: 
+            if not name or not name + '.zip' in zips:
                 self.server.send_response(player, '✖ Debes proveer un nombre en la lista.')
                 return
-            elif self.creating_bkp: 
+            
+            # Leer autor del backup
+            author = None
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                if 'bkp_log.txt' in zip_ref.namelist():
+                    lines = zip_ref.read('bkp_log.txt').decode().split('\n')
+                    if lines:
+                        author_line = lines[0]
+                        if author_line.startswith("Backup realizado por:"):
+                            author = author_line.removeprefix("Backup realizado por:").strip()
+
+            # Verificar permisos
+            if player not in self.server.admins:
+                if author is None:
+                    self.server.send_response(player, '✖ No se puede actualizar: backup sin autor registrado.')
+                    return
+                elif player != author:
+                    self.server.send_response(player, '✖ Solo el admin o el creador del backup puede actualizarlo.')
+                    return
+
+            if self.creating_bkp: 
                 self.server.send_response(player, '✖ Alguien más está creando un backup ahorita.')
                 return
 
             self.creating_bkp = True
-            
             await self.update_reg_bkp(player, name)
+
 
         elif not player in self.server.admins and self.server.name == 'SMP': return
 
@@ -225,7 +246,7 @@ class mdplugin():
                         
                     log_content.append(f'{dim} : {reg}')
 
-            log_text = f"Archivos respaldados:\n" + "\n".join(log_content)
+            log_text = f"Backup realizado por: {player}\nArchivos respaldados:\n" + "\n".join(log_content)
             zipf.writestr("bkp_log.txt", log_text)
 
         self.server.execute('save-on')
@@ -282,7 +303,7 @@ class mdplugin():
                         
                     log_content.append(f'{dim} : {reg}')
 
-            log_text = f"Archivos respaldados:\n" + "\n".join(log_content)
+            log_text = f"Backup realizado por: {player}\nArchivos respaldados:\n" + "\n".join(log_content)
             zipf.writestr("bkp_log.txt", log_text)
 
         self.server.execute('save-on')
@@ -339,8 +360,19 @@ class mdplugin():
 
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                 if 'bkp_log.txt' in zip_ref.namelist():
-                    log_info = zip_ref.read('bkp_log.txt').decode().split('\n')
-                    log_info = ' | '.join(log_info[1:])
+                    log_info_lines = zip_ref.read('bkp_log.txt').decode().split('\n')
+                    if len(log_info_lines) > 2:
+                        # log_info_lines[0] = "Backup realizado por: <player>"
+                        # log_info_lines[1] = "Archivos respaldados:"
+                        author = log_info_lines[0].removeprefix("Backup realizado por: ").strip()
+                        regions_log = ' | '.join(log_info_lines[2:])  # saltamos la línea "Archivos respaldados:"
+                        log_info = f"Hecho por: {author} | {regions_log}"
+                    elif len(log_info_lines) > 1:
+                        # si no hay "Archivos respaldados:", mostramos solo lo que haya
+                        author = log_info_lines[0].removeprefix("Backup realizado por: ").strip()
+                        log_info = f"Hecho por: {author}"
+                    else:
+                        log_info = 'Sin registro de autor.'
                 else:
                     log_info = 'Sin registro.'
 

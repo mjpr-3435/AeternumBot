@@ -23,17 +23,17 @@ whitelist_path = os.path.join(os.path.dirname(__file__), 'Whitelist.json')
 
 config = {      
     'Thumbnail'         : 'https://i.postimg.cc/XqQx5rT5/logo.png',
-    'Link Overviewer'   : 'http://map.aeternumsmp.com:25581/',
+    'Link Overviewer'   : 'http://map.aeternumsmp.net:25581/',
     'Emoji Overviewer'  : '🌐',
     'Emoji Arrow Left'  : '⬅️',
     'Emoji Server'      : '<:aeternum:925134249865142303>',
     'Foundation Date'   : '2021-05-12',
     'Emoji Server'      : '<:aeternum:925134249865142303>',
-    'IP Server'         : 'mc.aeternumsmp.com',
-    'IP Plugins'        : 'plugins.aeternumsmp.com',
-    'IP Dummy'          : 'dummy.aeternumsmp.com',
-    'Ip 1.12'           : 'ae12.aeternumsmp.com',
-    'IP Cobble'         : 'cobblemon.aeternumsmp.com',
+    'IP Server'         : 'mc.aeternumsmp.net',
+    'IP Plugins'        : 'plugins.aeternumsmp.net',
+    'IP Dummy'          : 'dummy.aeternumsmp.net',
+    'Ip 1.12'           : 'ae12.aeternumsmp.net',
+    'IP Cobble'         : 'cobblemon.aeternumsmp.net',
     'Link Paypal'       : 'https://paypal.me/CubifyHosting',
     'Seed'              : '2563108827657901651',
     'Channel ID'        : 914533677411754024}
