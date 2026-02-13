@@ -6,6 +6,14 @@ class banner_views(discord.ui.View):
     def __init__(self):
         super().__init__(timeout = None)
 
+        self.add_item(
+            discord.ui.Button(
+                label="Guía de Aeternum",
+                style=discord.ButtonStyle.link,
+                url="https://1drv.ms/b/c/084c1940e0b695f3/IQDoiPQ4yUHKQrsOUxKT6wK5AQVQ9eTk4m8j3oScqY5vxkA?e=Toyohi"
+            )
+        )
+
     @discord.ui.button(label = 'Whitelist',
                        style = discord.ButtonStyle.gray)
     async def whitelist_button(self, interaction:discord.Interaction, button: discord.ui.Button):
@@ -15,16 +23,6 @@ class banner_views(discord.ui.View):
                        style = discord.ButtonStyle.gray)
     async def apoyo_button(self, interaction:discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(embeds = apoyo_embed(), ephemeral = True)
-
-    """@discord.ui.button(label = 'Perímetros',
-                       style = discord.ButtonStyle.gray)
-    async def perimetros_button(self, interaction:discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message(embeds = perimetros_embed(), ephemeral = True)
-
-    @discord.ui.button(label = 'Decoraciones',
-                       style = discord.ButtonStyle.gray)
-    async def decoraciones_button(self, interaction:discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message(embeds = decoraciones_embed(), ephemeral = True)"""
 
 class AddNicknameModal(discord.ui.Modal, title = "Agregar a la Whitelist"):
     nickname = discord.ui.TextInput(
