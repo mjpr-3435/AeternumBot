@@ -11,7 +11,7 @@ class AeServer(Server):
     def         __init__                (self, name: str, client: McDisClient, config: dict):
         super().__init__(name, client, config)
 
-        self.admins                     = ['KassiuLo', 'LuisitoLapapa', 'XMasi', 'NajaHorse']
+        self.admins                     = ['KassiuLo', 'LuisitoLapapa', 'XMasi', 'NajaHorse', 'Danc0405', 'OmaOma03']
         self.omit_crash_report_relay    = False
         self.stop_signal_received       = False
         self.online_players             = []

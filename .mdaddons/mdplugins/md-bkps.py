@@ -1,54 +1,49 @@
 import asyncio
 import threading
-import zipfile
+import shutil
 import os
 
 from datetime import datetime
-from mcdis_rcon.utils import hover_and_suggest, extras
+from mcdis_rcon.utils import hover_and_suggest, extras, sct
 from Classes.AeServer import AeServer
 
 class mdplugin():
     def __init__(self, server: AeServer):
         self.server = server
-        self.scheduled_make_backup  = []
         self.scheduled_load_backup  = {}
         self.action_confirmed       = False
 
-    async def on_player_command(self, player: str, message: str):
-        zips = [x for x in os.listdir(self.server.path_bkps) if x.endswith('.zip')]
+    async def   on_player_command(self, player: str, message: str):
+        backups = [x for x in os.listdir(self.server.path_bkps)]
 
         if not player in self.server.admins:
             return
         
         elif self.server.is_command(message, 'mdhelp'):
-            self.server.show_command(player, 'bk help'             , 'Muestra los comandos del backup manager.')
+            self.server.show_command(player, 'bk'             , 'Muestra los comandos del backup manager.')
 
         elif self.server.is_command(message, 'bk help'):
-            self.server.show_command(player, 'bk bkps'             , 'Lista los backups del servidor.')
-            self.server.show_command(player, 'bk mk-bkp'           , 'Crea un backup con la lógica de McDis.')
-            self.server.show_command(player, 'bk del-bkp <name>'   , 'Elimina el backup <name>.zip.')
-            self.server.show_command(player, 'bk load-bkp <name>'  , 'Carga el backup <name>.zip.')
+            self.server.show_command(player, 'bkps'             , 'Lista los backups del servidor.')
+            self.server.show_command(player, 'mk-bkp'           , 'Crea un backup con la lógica de McDis.')
+            self.server.show_command(player, 'del-bkp <name>'   , 'Elimina el backup <name>.zip.')
+            self.server.show_command(player, 'load-bkp <name>'  , 'Carga el backup <name>.zip.')
             self.server.show_command(player, 'bk confirm'          , 'Confirma la acción solicitada.')
         
-        elif self.server.is_command(message, 'bk mk-bkp'):
-            self.scheduled_make_backup.append(player)
+        elif self.server.is_command(message, 'bkps'):
+            self.show_bkps(player)
+    
+        elif self.server.is_command(message, 'mk-bkp'):
+            await self.make_bkp(player)
 
-            dummy = extras(
-                [hover_and_suggest('!!bk confirm' , color= 'dark_gray', suggest = '!!bk confirm', hover = '!!bk confirm')],
-                text = f"Para confirmar la creación del backup utiliza "
-                )
+        elif self.server.is_command(message, 'load-bkp'):
+            backup = message.removeprefix(f'{self.server.prefix}load-bkp').strip()
 
-            self.server.execute(f'tellraw {player} {dummy}') 
-
-        elif self.server.is_command(message, 'bk load-bkp'):
-            zip = message.removeprefix(f'{self.server.prefix}load-bkp').strip() + '.zip'
-
-            if zip in zips:
-                self.scheduled_load_backup[player]  = zip
+            if backup in backups:
+                self.scheduled_load_backup[player]  = backup
 
                 dummy = extras(
-                [hover_and_suggest('!!bk confirm' , color= 'dark_gray', suggest = '!!bk confirm', hover = '!!bk confirm')],
-                text = f"Para confirmar la carga de §d[{zip}]§7 utiliza "
+                [hover_and_suggest('!!bk confirm' , color= 'gray', suggest = '!!bk confirm', hover = '!!bk confirm')],
+                text = f"Para confirmar la carga de §d[{backup}]§7 utiliza "
                 )
 
                 self.server.execute(f'tellraw {player} {dummy}')
@@ -57,7 +52,7 @@ class mdplugin():
                 self.server.send_response(player, '✖ No hay un backup con ese nombre.')
 
         elif self.server.is_command(message, 'bk confirm'):
-            if not player in self.scheduled_load_backup.keys() + self.scheduled_make_backup: 
+            if not player in self.scheduled_load_backup.keys(): 
                 self.server.send_response(player, '✖ No has solicitado la carga o creación de ningún backup.')
                 return
             
@@ -74,22 +69,23 @@ class mdplugin():
             if player in self.scheduled_load_backup.keys():
                 await self.load_bkp(player)
 
-            elif player in self.scheduled_make_backup:
-                await self.make_bkp()
+        elif self.server.is_command(message, 'del-bkp'):
+            backup = message.removeprefix(f'{self.server.prefix}del-bkp').strip()
 
-        elif self.server.is_command(message, 'bk del-bkp'):
-            zip = message.removeprefix(f'{self.server.prefix}del-bkp').strip() + '.zip'
-
-            if zip in zips:
-                os.remove(os.path.join(self.server.path_bkps, zip))
+            if backup in backups:
+                shutil.rmtree(os.path.join(self.server.path_bkps, backup))
                 self.show_bkps(player)
-                self.server.send_response(player, f'✔ Backup {zip} eliminado.')
+                self.server.send_response(player, f'✔ Backup {backup} eliminado.')
             else:
                 self.server.send_response(player, '✖ No hay un backup con ese nombre.')
-        
-        elif self.server.is_command(message, 'bk bkps'):
-            self.show_bkps(player)
-    
+
+    async def   listener_events(self, log : str):
+        if not 'INFO]:' in log: 
+            pass
+            
+        elif log.endswith('Saved the game') and self.waiting:
+                self.waiting = False
+
     async def   load_bkp (self, player: str):
         zip = self.scheduled_load_backup[player]
 
@@ -133,13 +129,18 @@ class mdplugin():
 
         self.server.start()
 
-    async def   make_bkp (self):
-        self.server.stop()
-
-        while self.server.is_running():
-            await asyncio.sleep(0.1)
-
+    async def   make_bkp (self, player):
         discord_message = await self.server.send_to_console('Creating backup...')
+
+        self.waiting = True
+
+        self.server.execute('save-off')
+        self.server.execute('save-all')
+
+        while self.waiting:
+            await asyncio.sleep(1)
+
+        self.server.execute(f'tellraw @a {{"text":"[md-bkps]: Creando backup...", "color": "gray"}}')
 
         counter = [0,0]
         reports = {'error': False}
@@ -151,61 +152,66 @@ class mdplugin():
 
         task = threading.Thread(
             target = make_bkp, 
-            kwargs = {'counter' : counter})
+            kwargs = {'counter' : counter,
+                      'Force': True})
         task.start()
         
         while task.is_alive():
             if counter[1] == 0: 
                 await asyncio.sleep(0.1)
             else:
-                show = '```md\n[md-bkps]: [{}/{}] files have been compressed...\n```'\
+                show = '```md\n[md-bkps]: [{}/{}] files have been copying...\n```'\
                     .format(counter[0], counter[1])
+                
+                percent = counter[0]*100/counter[1]
+                self.server.execute(f'tellraw @a {{"text":"[md-bkps]: {sct["c:white"]}{percent:6.2f}{sct["c:gold"]}%{sct["f:reset"]} archivos copiados...", "color": "gray"}}')
+
                 await discord_message.edit(
                     content = show)
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(1)
         
+        self.server.execute('save-on')
+
         if reports['error']:
-            msg = '```md\n[md-bkps]: ✖ An error occurred while compressing files.\n```'
+            msg = '```md\n[md-bkps]: ✖ An error occurred while copying files.\n```'
+            self.server.execute(f'tellraw @a {{"text":"[md-bkps]: Ocurrio un error mientras se copiaban los archivos.", "color": "gray"}}')
         else:
-            msg = '```md\n[md-bkps]: ✔ The files have been successfully compressed.\n```'
+            msg = '```md\n[md-bkps]: ✔ The backup have been successfully created.\n```'
+            self.server.execute(f'tellraw @a {{"text":"[md-bkps]: El backup se creo exitosamente.", "color": "gray"}}')
 
         await discord_message.edit(content = msg)
-
-        self.server.start()
         
-    def show_bkps(self, player : str):
-        zips = [x for x in os.listdir(self.server.path_bkps) if x.endswith('.zip')]
-        zips.sort()
+    def         show_bkps(self, player : str):
+        backups = [x for x in os.listdir(self.server.path_bkps)]
+        backups.sort()
         
-        if not zips:
+        if not backups:
             self.server.send_response(player, 'No se han creado backups.')
             return
         
         self.server.send_response(player, 'Backups disponibles:')
 
-        for zip in zips:
-            file = os.path.join(self.server.path_bkps, zip)
-            
-            with zipfile.ZipFile(file, 'r') as zipf:
-                log_filename = 'backup_log.txt'
+        for backup in backups:
+            file = os.path.join(self.server.path_bkps, backup, 'backup_log.txt')
 
-                if log_filename in zipf.namelist():
-                    with zipf.open(log_filename) as log_file:
-                        log_content = log_file.read().decode('utf-8')
-                        
-                        lines = log_content.splitlines()
-                        for line in lines:
-                            if line.startswith('Backup created on:'):
-                                date_str = line.replace('Backup created on:', '').strip()
-                                date = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%d %H:%M:%S')
-                                break
-                else:
-                    date = "Date not found in log"
+            if os.path.exists(file):
+                with open(file, 'r', encoding='utf-8') as log_file:
+                    lines = log_file.read().splitlines()
+                    for line in lines:
+                        if line.startswith('Backup created on:'):
+                            date_str = line.replace('Backup created on:', '').strip()
+                            date = datetime.strptime(
+                                date_str,
+                                '%Y-%m-%d %H:%M:%S'
+                            ).strftime('%Y-%m-%d %H:%M:%S')
+                            break
+            else:
+                date = "Date not found in log"
 
             dummy = [
-            hover_and_suggest('[>] ' , color = 'green', suggest = f'!!load-bkp {zip.removesuffix(".zip")}', hover = 'Load backup'),
-            hover_and_suggest('[x] ' , color = 'red', suggest = f'!!del-bkp {zip.removesuffix(".zip")}', hover = 'Del backup'),
-            f'{{"text":"{zip} [{date}]"}}'
+            hover_and_suggest('[>] ' , color = 'green', suggest = f'!!bk load-bkp {backup.removesuffix(".zip")}', hover = 'Load backup'),
+            hover_and_suggest('[x] ' , color = 'red', suggest = f'!!bk del-bkp {backup.removesuffix(".zip")}', hover = 'Del backup'),
+            f'{{"text":"{backup} [{date}]"}}'
             ]
 
             self.server.execute(f'tellraw {player} {extras(dummy)}')

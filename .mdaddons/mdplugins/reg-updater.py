@@ -95,7 +95,7 @@ class mdplugin():
             for i in range(5):
                 await asyncio.sleep(1)
                 self.server.send_response('@a', f'El servidor se reiniciará en {5-i} segundos.')
-                
+            
             smp_server = next(filter(lambda x: x.name == 'SMP', self.server.client.servers), None)
             
             if not smp_server:
