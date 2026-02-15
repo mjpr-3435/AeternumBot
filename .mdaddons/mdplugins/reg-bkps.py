@@ -13,16 +13,24 @@ class mdplugin():
         self.creating_bkp           = False
         self.waiting                = False
         self.scheduled_backup       = {}
+        self.player_positions       = {}
         self.load_confirmed         = False
 
         self.reg_bkps_dir = os.path.join(self.server.path_plugins, 'reg-bkps')
         os.makedirs(self.reg_bkps_dir, exist_ok = True)
 
     async def   on_player_command(self, player: str, message: str):
-        if not player in self.files_to_zip.keys():
-            self.files_to_zip[player] = {'overworld':[],
-                                    'the_nether':[],
-                                    'the_end':[]}
+        if player not in self.files_to_zip:
+            self.files_to_zip[player] = {'overworld': [], 'the_nether': [], 'the_end': []}
+
+        if player not in self.player_positions:
+            self.player_positions[player] = {
+                'overworld':  {'pos1': None, 'pos2': None},
+                'the_nether': {'pos1': None, 'pos2': None},
+                'the_end':    {'pos1': None, 'pos2': None},
+            }
+
+
 
         zips = [x for x in os.listdir(self.reg_bkps_dir) if x.endswith('.zip')]
 
@@ -33,6 +41,9 @@ class mdplugin():
             self.server.show_command(player, 'rb clear'          , 'Limpia tu lista.')
             self.server.show_command(player, 'rb list'           , 'Muestra tu lista de regiones.')
             self.server.show_command(player, 'rb add'            , 'Añade a tu lista una región.')
+            self.server.show_command(player, 'rb remove'         , 'Quita de tu lista la región donde te encuentras actualmente.')
+            self.server.show_command(player, 'rb pos1'       , 'Establece la primera esquina de un rectángulo de regiones.')
+            self.server.show_command(player, 'rb pos2'       , 'Establece la segunda esquina de un rectángulo de regions.')
             self.server.show_command(player, 'rb del <index>'    , 'Elimina la región de índice <index> de tu lista.')
             self.server.show_command(player, 'rb mk-bkp <name>'  , 'Crea un reg-bkp <name>.zip con las regiones añadidas.')
             self.server.show_command(player, 'rb update <name>'  , 'Actualiza el reg-bkp <name>.zip reimportando regiones.')
@@ -45,18 +56,25 @@ class mdplugin():
 
 
         elif self.server.is_command(message, 'rb add'):
-            raw_pos = await self.server.get_data(player, 'Pos')
-            raw_pos = raw_pos[raw_pos.find('[') + 1 : raw_pos.find(']')].split(',')
-            raw_dim = await self.server.get_data(player, 'Dimension')
-            dim     = raw_dim.replace('"','').split(':')[1]
-            pos     = tuple(float(x.strip()[:-1]) for x in raw_pos)
-            reg     = self.pos_to_region(pos)
+            pos, dim = await self.get_player_position(player)
+            reg = self.pos_to_region(pos)
 
-            if not reg in self.files_to_zip[player][dim]: 
+            if reg not in self.files_to_zip[player][dim]:
                 self.files_to_zip[player][dim].append(reg)
 
             self.show_list(player)
         
+        elif self.server.is_command(message, 'rb remove'):
+            pos, dim = await self.get_player_position(player)
+            current_reg = self.pos_to_region(pos)
+            if current_reg in self.files_to_zip[player][dim]:
+                self.files_to_zip[player][dim].remove(current_reg)
+                self.server.send_response(player, f'✔ Región {current_reg} eliminada de tu lista.')
+            else:
+                self.server.send_response(player, '✖ La región actual no está en tu lista.')
+            self.show_list(player)
+
+
         elif self.server.is_command(message, 'rb del'):
             index = int(message.removeprefix(f'{self.server.prefix}rb del'))
             
@@ -76,12 +94,31 @@ class mdplugin():
         
         elif self.server.is_command(message, 'rb bkps'):
             self.show_bkps(player)
-
+        
         elif self.server.is_command(message, 'rb clear'):
-            self.files_to_zip[player] = {'overworld':[],
-                                    'the_nether':[],
-                                    'the_end':[]}
+            self.files_to_zip[player] = {'overworld': [], 'the_nether': [], 'the_end': []}
+            self.player_positions[player] = {'pos1': None, 'pos2': None}
             self.show_list(player)
+        
+        elif self.server.is_command(message, 'rb pos1'):
+            pos, dim = await self.get_player_position(player)
+            self.player_positions[player][dim]['pos1'] = pos
+            self.server.send_response(player, f"✔ Pos1 establecida")
+            
+            if self.player_positions[player][dim]['pos2']:
+                self.add_rect_regions(player, dim)
+                self.show_list(player)
+
+        elif self.server.is_command(message, 'rb pos2'):
+            pos, dim = await self.get_player_position(player)
+
+            self.player_positions[player][dim]['pos2'] = pos
+            self.server.send_response(player, f"✔ Pos2 establecida")
+
+            if self.player_positions[player][dim]['pos1']:
+                self.add_rect_regions(player, dim)
+                self.show_list(player)
+
 
         elif self.server.is_command(message, 'rb mk-bkp'):
             name = message.removeprefix(f'{self.server.prefix}rb mk-bkp').strip()
@@ -242,7 +279,9 @@ class mdplugin():
                 for reg in self.files_to_zip[player][dim]:
                     for folder in [region, poi, entities]:
                         file_path = os.path.join(self.server.path_files, 'server', 'world', folder, reg)
-                        zipf.write(file_path, os.path.join(folder, reg))
+                        
+                        if os.path.exists(file_path):
+                            zipf.write(file_path, os.path.join(folder, reg))
                         
                     log_content.append(f'{dim} : {reg}')
 
@@ -299,7 +338,9 @@ class mdplugin():
                 for reg in self.files_to_zip[player][dim]:
                     for folder in [region, poi, entities]:
                         file_path = os.path.join(self.server.path_files, 'server', 'world', folder, reg)
-                        zipf.write(file_path, os.path.join(folder, reg))
+                        
+                        if os.path.exists(file_path):
+                            zipf.write(file_path, os.path.join(folder, reg))
                         
                     log_content.append(f'{dim} : {reg}')
 
@@ -362,13 +403,10 @@ class mdplugin():
                 if 'bkp_log.txt' in zip_ref.namelist():
                     log_info_lines = zip_ref.read('bkp_log.txt').decode().split('\n')
                     if len(log_info_lines) > 2:
-                        # log_info_lines[0] = "Backup realizado por: <player>"
-                        # log_info_lines[1] = "Archivos respaldados:"
                         author = log_info_lines[0].removeprefix("Backup realizado por: ").strip()
-                        regions_log = ' | '.join(log_info_lines[2:])  # saltamos la línea "Archivos respaldados:"
+                        regions_log = ' | '.join(log_info_lines[2:])
                         log_info = f"Hecho por: {author} | {regions_log}"
                     elif len(log_info_lines) > 1:
-                        # si no hay "Archivos respaldados:", mostramos solo lo que haya
                         author = log_info_lines[0].removeprefix("Backup realizado por: ").strip()
                         log_info = f"Hecho por: {author}"
                     else:
@@ -391,3 +429,87 @@ class mdplugin():
         r_z = int(pos[2] // (32*16))
 
         return f"r.{r_x}.{r_z}.mca"
+    
+    
+    async def get_player_position(self, player: str):
+        # Obtener posición
+        raw_pos = await self.server.get_data(player, 'Pos')
+        raw_pos = raw_pos[raw_pos.find('[')+1 : raw_pos.find(']')].split(',')
+        pos = tuple(float(x.strip()[:-1]) for x in raw_pos)
+
+        # Obtener dimensión
+        raw_dim = await self.server.get_data(player, 'Dimension')
+        dim = raw_dim.replace('"','').split(':')[1]
+
+        return pos, dim
+    
+    def get_region_folder(self, dim: str):
+        base = os.path.join(self.server.path_files, 'server', 'world')
+
+        if dim == 'overworld':
+            return os.path.join(base, 'region')
+        elif dim == 'the_nether':
+            return os.path.join(base, 'DIM-1', 'region')
+        elif dim == 'the_end':
+            return os.path.join(base, 'DIM1', 'region')
+        else:
+            raise ValueError(f'Dimensión desconocida: {dim}')
+
+    def add_rect_regions(self, player: str, dim: str):
+        pos1 = self.player_positions[player][dim]['pos1']
+        pos2 = self.player_positions[player][dim]['pos2']
+        if not pos1 or not pos2:
+            return
+
+        x_min, x_max = sorted([pos1[0], pos2[0]])
+        z_min, z_max = sorted([pos1[2], pos2[2]])
+
+        self.files_to_zip[player][dim] = []
+
+        region_folder = self.get_region_folder(dim)
+
+        for reg_file in os.listdir(region_folder):
+            if not reg_file.endswith('.mca'):
+                continue
+
+            r_x, r_z = map(int, reg_file[2:-4].split('.'))
+
+            reg_x_min = r_x * 512
+            reg_x_max = reg_x_min + 511
+            reg_z_min = r_z * 512
+            reg_z_max = reg_z_min + 511
+
+            if not (reg_x_max < x_min or reg_x_min > x_max or reg_z_max < z_min or reg_z_min > z_max):
+                self.files_to_zip[player][dim].append(reg_file)
+
+    async def spawn_temp_marker(self, player: str, pos: tuple, dim: str, label: str, seconds: int = 5):
+        x = int(pos[0])
+        y = int(pos[1])
+        z = int(pos[2])
+
+        tag = f"rb_{player}_{label}"
+
+        # bloque visible (como worldedit marker)
+        nbt_block = (
+            '{BlockState:{Name:"minecraft:white_stained_glass"},'
+            'Glowing:1b,Invisible:0b,Invulnerable:1b,PersistenceRequired:1b,'
+            'Silent:1b,NoGravity:1b,Time:1,DropItem:0b,HurtEntities:0b,'
+            f'Tags:["{tag}"]}}'
+        )
+
+        self.server.execute(
+            f'execute in minecraft:{dim} run summon minecraft:falling_block {x} {y} {z} {nbt_block}'
+        )
+
+        # texto flotante
+        name_json = f'{{"text":"{label.upper()}","color":"yellow","bold":true}}'
+        self.server.execute(
+            f'execute in minecraft:{dim} run summon minecraft:armor_stand {x} {y+1.5} {z} '
+            f'{{Invisible:1b,NoGravity:1b,Marker:1b,CustomNameVisible:1b,CustomName:\'{name_json}\',Tags:["{tag}"]}}'
+        )
+
+        await asyncio.sleep(seconds)
+
+        # borrar todo
+        self.server.execute(f'execute in minecraft:{dim} run kill @e[tag={tag}]')
+
