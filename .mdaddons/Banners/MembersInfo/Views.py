@@ -10,7 +10,7 @@ class banner_views(discord.ui.View):
             discord.ui.Button(
                 label="Guía de Aeternum",
                 style=discord.ButtonStyle.link,
-                url="https://1drv.ms/b/c/084c1940e0b695f3/IQDoiPQ4yUHKQrsOUxKT6wK5AQVQ9eTk4m8j3oScqY5vxkA?e=Toyohi"
+                url="https://1drv.ms/f/c/084c1940e0b695f3/IgCRDTCc3IsuQI503WeNsyFuAYkjl6chCYuO3vrX6ZFhYfQ?e=lab3kc"
             )
         )
 

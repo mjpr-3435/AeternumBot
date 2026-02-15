@@ -42,6 +42,10 @@ class mdplugin():
             await self.make_bkp(player, comment if comment else None)
         
         if not player in self.server.admins:
+            if  self.server.is_command(message, 'load-bkp') or \
+                self.server.is_command(message, 'bk confirm') or \
+                self.server.is_command(message, 'del-bkp'):
+                await self.server.send_response(player, '✖ Comando reservado solo para administradores.')
             return
         
         elif self.server.is_command(message, 'load-bkp'):
