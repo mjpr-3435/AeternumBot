@@ -300,7 +300,12 @@ class mdplugin():
 
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             if 'bkp_log.txt' in zip_ref.namelist():
-                log_info = zip_ref.read('bkp_log.txt').decode().split('\n')[1:]
+                raw_lines = zip_ref.read('bkp_log.txt').decode().split('\n')
+
+                log_info = []
+                for line in raw_lines:
+                    if ' : r.' in line and line.endswith('.mca'):
+                        log_info.append(line)
             else:
                 self.server.send_response(player, f'✖ El reg-bkp {name}.zip no tiene registro de regiones.')
                 return
