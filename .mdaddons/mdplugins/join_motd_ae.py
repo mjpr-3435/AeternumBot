@@ -78,6 +78,9 @@ class mdplugin():
                             extras([hover_and_run('§l[SMP] ', color = 'white', command = '/server SMP', hover = '/server SMP'),
                                     hover_and_run('§l[CMP] ', color = 'white', command = '/server CMP', hover = '/server CMP'),
                                     hover_and_run('§l[MMP] ', color = 'white', command = '/server MMP', hover = '/server MMP')], 
+                                    text= 'Servers: ', color = 'white')\
+                            if self.server.name in ["SMP", "CMP", "MMP"] else \
+                            extras([hover_and_run('§l[PMP] ', color = 'white', command = '', hover = '')], 
                                     text= 'Servers: ', color = 'white'),
 
                             f'{{"text" : "{active_days}"}}',

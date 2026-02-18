@@ -74,7 +74,6 @@ class mdplugin():
                 self.server.send_response(player, '✖ La región actual no está en tu lista.')
             self.show_list(player)
 
-
         elif self.server.is_command(message, 'rb del'):
             index = int(message.removeprefix(f'{self.server.prefix}rb del'))
             
@@ -165,7 +164,7 @@ class mdplugin():
                     self.server.send_response(player, '✖ No se puede actualizar: backup sin autor registrado.')
                     return
                 elif player != author:
-                    self.server.send_response(player, '✖ Solo el admin o el creador del backup puede actualizarlo.')
+                    self.server.send_response(player, '✖ Solo los administradores o el creador del backup puede actualizarlo.')
                     return
 
             if self.creating_bkp: 
@@ -211,15 +210,35 @@ class mdplugin():
             await self.load_reg_bkp(player)
 
         elif self.server.is_command(message, 'rb del-bkp'):
-            zip = message.removeprefix(f'{self.server.prefix}rb del-bkp').strip() + '.zip'
+            zip_name = message.removeprefix(f'{self.server.prefix}rb del-bkp').strip()
+            zip_file = zip_name + '.zip'
+            zip_path = os.path.join(self.reg_bkps_dir, zip_file)
 
-            if zip in zips:
-                os.remove(os.path.join(self.reg_bkps_dir, zip))
-                self.show_bkps(player)
-                self.server.send_response(player, f'✔ reg-bkp {zip} eliminado.')
-            else:
+            if zip_file not in [x for x in os.listdir(self.reg_bkps_dir) if x.endswith('.zip')]:
                 self.server.send_response(player, '✖ No hay un reg-bkp con ese nombre.')
+                return
 
+            # Leer autor del backup
+            author = None
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                if 'bkp_log.txt' in zip_ref.namelist():
+                    lines = zip_ref.read('bkp_log.txt').decode().split('\n')
+                    if lines and lines[0].startswith("Backup realizado por:"):
+                        author = lines[0].removeprefix("Backup realizado por:").strip()
+
+            # Verificar permisos
+            if player not in self.server.admins:
+                if author is None:
+                    self.server.send_response(player, '✖ No se puede eliminar: backup sin autor registrado.')
+                    return
+                elif player != author:
+                    self.server.send_response(player, '✖ Solo el creador o un admin puede eliminar este backup.')
+                    return
+
+            # Borrar backup
+            os.remove(zip_path)
+            self.show_bkps(player)
+            self.server.send_response(player, f'✔ reg-bkp {zip_file} eliminado.')
 
     async def   listener_events(self, log : str):
         if not 'INFO]:' in log: 

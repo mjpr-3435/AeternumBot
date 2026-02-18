@@ -16,7 +16,7 @@ class mdaddon():
             {   'SMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'reg-bkps.py',                   'tts_addon.py', 'execute.py', 'scoreboard.py', 'md-bkps.py'],
                 'CMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'reg-bkps.py',                   'tts_addon.py', 'op.py'],
                 'MMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'reg-bkps.py', 'reg-updater.py', 'tts_addon.py', 'op.py'],
-                'PMP'           : ['manager.py', 'chatbridge.py', 'calc.py',                    'here.py', 'reg-bkps.py', 'reg-updater.py', 'tts_addon.py', 'op.py'],
+                'PMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'reg-bkps.py', 'reg-updater.py', 'tts_addon.py', 'op.py'],
                 'Dummy'         : ['manager.py', 'chatbridge.py', 'calc.py',                    'here.py', 'tts_addon.py', 'dummy_manager.py']
                 }
         
