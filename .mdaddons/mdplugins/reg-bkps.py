@@ -3,7 +3,7 @@ import zipfile
 import os
 
 from datetime import datetime
-from mcdis_rcon.utils import hover_and_suggest, extras, hover, sct
+from mcdis_rcon.utils import hover_and_suggest, extras, hover, write_in_file, read_file
 from Classes.AeServer import AeServer
 
 class mdplugin():
@@ -15,9 +15,16 @@ class mdplugin():
         self.scheduled_backup       = {}
         self.player_positions       = {}
         self.load_confirmed         = False
+        self.whitelisted_players    = set()
 
         self.reg_bkps_dir = os.path.join(self.server.path_plugins, 'reg-bkps')
         os.makedirs(self.reg_bkps_dir, exist_ok = True)
+        self.whitelist_text_path = os.path.join(self.reg_bkps_dir, 'whitelist.txt')
+
+        if not os.path.exists(self.whitelist_text_path):
+            write_in_file(self.whitelist_text_path, '')
+
+        self.whitelisted_players = self.load_whitelist()
 
     async def   on_player_command(self, player: str, message: str):
         if player not in self.files_to_zip:
@@ -49,11 +56,16 @@ class mdplugin():
             self.server.show_command(player, 'rb update <name>'  , 'Actualiza el reg-bkp <name>.zip reimportando regiones.')
             self.server.show_command(player, 'rb bkps'           , 'Lista los backups creados.')
             
-            if not player in self.server.admins and self.server.name == 'SMP': return
+            if not self.is_admin_or_whitelisted(player) and self.server.name == 'SMP': return
             self.server.show_command(player, 'rb load-bkp <name>', 'Carga el reg-bkp <name>.zip.')
             self.server.show_command(player, 'rb del-bkp <name>' , 'Elimina el reg-bkp <name>.zip.')
             self.server.show_command(player, 'rb confirm'        , 'Confirma la carga del reg-bkp específicado.')
-
+            
+            if player in self.server.admins:
+                self.server.show_command(player, 'rb wl list'            , 'Muestra la whitelist de carga de reg-bkps.')
+                self.server.show_command(player, 'rb wl add <player>'    , 'Añade un jugador a la whitelist.')
+                self.server.show_command(player, 'rb wl remove <player>' , 'Quita un jugador de la whitelist.')
+                self.server.show_command(player, 'rb wl clear'           , 'Limpia toda la whitelist.')
 
         elif self.server.is_command(message, 'rb add'):
             pos, dim = await self.get_player_position(player)
@@ -159,7 +171,7 @@ class mdplugin():
                             author = author_line.removeprefix("Backup realizado por:").strip()
 
             # Verificar permisos
-            if player not in self.server.admins:
+            if not self.is_admin_or_whitelisted(player):
                 if author is None:
                     self.server.send_response(player, '✖ No se puede actualizar: backup sin autor registrado.')
                     return
@@ -175,7 +187,7 @@ class mdplugin():
             await self.update_reg_bkp(player, name)
 
 
-        elif not player in self.server.admins and self.server.name == 'SMP': return
+        elif not self.is_admin_or_whitelisted(player) and self.server.name == 'SMP': return
 
         elif self.server.is_command(message, 'rb load-bkp'):
             zip = message.removeprefix(f'{self.server.prefix}rb load-bkp').strip() + '.zip'
@@ -227,7 +239,7 @@ class mdplugin():
                         author = lines[0].removeprefix("Backup realizado por:").strip()
 
             # Verificar permisos
-            if player not in self.server.admins:
+            if not self.is_admin_or_whitelisted(player):
                 if author is None:
                     self.server.send_response(player, '✖ No se puede eliminar: backup sin autor registrado.')
                     return
@@ -239,6 +251,42 @@ class mdplugin():
             os.remove(zip_path)
             self.show_bkps(player)
             self.server.send_response(player, f'✔ reg-bkp {zip_file} eliminado.')
+
+        elif not player in self.server.admins or self.server.name != 'SMP': return
+
+        elif self.server.is_command(message, 'rb wl list'):
+            self.show_whitelist(player)
+
+        elif self.server.is_command(message, 'rb wl add'):
+            target = message.removeprefix(f'{self.server.prefix}rb wl add').strip()
+            if not target:
+                self.server.send_response(player, '✖ Debes proveer un jugador.')
+                return
+
+            self.whitelisted_players.add(target)
+            self.save_whitelist()
+            self.server.send_response(player, f'✔ {target} agregado a la whitelist.')
+            self.show_whitelist(player)
+
+        elif self.server.is_command(message, 'rb wl remove'):
+            target = message.removeprefix(f'{self.server.prefix}rb wl remove').strip()
+            if not target:
+                self.server.send_response(player, '✖ Debes proveer un jugador.')
+                return
+
+            if target in self.whitelisted_players:
+                self.whitelisted_players.remove(target)
+                self.save_whitelist()
+                self.server.send_response(player, f'✔ {target} removido de la whitelist.')
+            else:
+                self.server.send_response(player, f'✖ {target} no está en la whitelist.')
+            self.show_whitelist(player)
+
+        elif self.server.is_command(message, 'rb wl clear'):
+            self.whitelisted_players.clear()
+            self.save_whitelist()
+            self.server.send_response(player, '✔ Whitelist limpiada.')
+
 
     async def   listener_events(self, log : str):
         if not 'INFO]:' in log: 
@@ -376,6 +424,27 @@ class mdplugin():
         self.server.add_log(f'reg-bkp {name}.zip updated')
         self.creating_bkp = False
 
+    def         is_admin_or_whitelisted(self, player: str):
+        return player in self.server.admins or player in self.whitelisted_players
+
+    def         show_whitelist(self, player: str):
+        if not self.whitelisted_players:
+            self.server.send_response(player, 'Whitelist vacía.')
+            return
+
+        msg = ['Whitelist de reg-bkps:']
+        for i, whitelisted in enumerate(sorted(self.whitelisted_players), start=1):
+            msg.append(f'{i} • {whitelisted}')
+        self.server.send_response(player, msg)
+        
+    def         load_whitelist(self):
+        players = read_file(self.whitelist_text_path).strip().split("\n")
+        return set(player for player in players if player)
+
+    def         save_whitelist(self):
+        write_in_file(self.whitelist_text_path, "\n".join(sorted(self.whitelisted_players)))
+
+
     def         show_list(self, player : str):
         if not player in self.files_to_zip.keys():
             self.server.send_response(player, 'Lista vacía.')
@@ -505,35 +574,4 @@ class mdplugin():
 
             if not (reg_x_max < x_min or reg_x_min > x_max or reg_z_max < z_min or reg_z_min > z_max):
                 self.files_to_zip[player][dim].append(reg_file)
-
-    async def spawn_temp_marker(self, player: str, pos: tuple, dim: str, label: str, seconds: int = 5):
-        x = int(pos[0])
-        y = int(pos[1])
-        z = int(pos[2])
-
-        tag = f"rb_{player}_{label}"
-
-        # bloque visible (como worldedit marker)
-        nbt_block = (
-            '{BlockState:{Name:"minecraft:white_stained_glass"},'
-            'Glowing:1b,Invisible:0b,Invulnerable:1b,PersistenceRequired:1b,'
-            'Silent:1b,NoGravity:1b,Time:1,DropItem:0b,HurtEntities:0b,'
-            f'Tags:["{tag}"]}}'
-        )
-
-        self.server.execute(
-            f'execute in minecraft:{dim} run summon minecraft:falling_block {x} {y} {z} {nbt_block}'
-        )
-
-        # texto flotante
-        name_json = f'{{"text":"{label.upper()}","color":"yellow","bold":true}}'
-        self.server.execute(
-            f'execute in minecraft:{dim} run summon minecraft:armor_stand {x} {y+1.5} {z} '
-            f'{{Invisible:1b,NoGravity:1b,Marker:1b,CustomNameVisible:1b,CustomName:\'{name_json}\',Tags:["{tag}"]}}'
-        )
-
-        await asyncio.sleep(seconds)
-
-        # borrar todo
-        self.server.execute(f'execute in minecraft:{dim} run kill @e[tag={tag}]')
 

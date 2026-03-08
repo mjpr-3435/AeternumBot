@@ -25,41 +25,6 @@ class AeServer(Server):
         os.makedirs(os.path.join(self.path_plugins, 'logger'), exist_ok = True)
         if not os.path.exists(self.players_text_path): write_in_file(self.players_text_path, '')
         if not os.path.exists(self.bots_text_path): write_in_file(self.bots_text_path, '')
-
-    def         send_response       (self, target : str, message : Union[str, list[str]], *, colour : str = 'gray'):
-        if isinstance(message, str):
-            self.execute(f'tellraw {target} {{"text": "{message}","color":"{colour}"}}')
-        
-        elif isinstance(message, list) and all(isinstance(i, str) for i in message):
-            for msg in message:
-                self.execute(f'tellraw {target} {{"text": "{msg}","color":"{colour}"}}')
-    
-    def         is_command          (self, message: str, command: str):
-        dummy = message + ' '
-        return dummy.startswith(f'{self.prefix}{command} ')
-
-    def         show_command        (self, target : str, command : str, description : str):
-        signs = [self.prefix, '<', '>', ':', '|']
-        mrkd_command = f'{self.prefix}{command}'
-        
-        for sign in signs: 
-            mrkd_command = mrkd_command.replace(sign, f'§6{sign}§f')
-        
-        description = '  ↳ ' + description
-
-        self.execute(f'tellraw {target} {hover_and_suggest(mrkd_command, suggest = f"{self.prefix}{command}", hover = mrkd_command)}')
-        self.send_response(target, description)
-
-    async def   get_data                (self, player: str, data: str) -> str:
-        self.requested_data[player] = None
-        self.execute(f"data get entity {player} {data}")
-        max_iter = 1000
-        
-        while not self.requested_data[player] and max_iter:
-            max_iter -= 1
-            await asyncio.sleep(0.01)
-        
-        return self.requested_data.pop(player)
     
     async def   _listener_events        (self, log : str):
         if 'INFO]: ' in log:
@@ -174,4 +139,55 @@ class AeServer(Server):
         if player in df['nickname'].values:
             df.loc[df['nickname'] == player, 'date'] = datetime.now().strftime('%Y-%m-%d')
             df.to_csv(whitelist_log)
+
+    def         send_response       (self, target : str, message : Union[str, list[str]], *, colour : str = 'gray'):
+        if isinstance(message, str):
+            self.execute(f'tellraw {target} {{"text": "{message}","color":"{colour}"}}')
         
+        elif isinstance(message, list) and all(isinstance(i, str) for i in message):
+            for msg in message:
+                self.execute(f'tellraw {target} {{"text": "{msg}","color":"{colour}"}}')
+    
+    def         is_command          (self, message: str, command: str):
+        dummy = message + ' '
+        return dummy.startswith(f'{self.prefix}{command} ')
+
+    def         show_command        (self, target : str, command : str, description : str):
+        signs = [self.prefix, '<', '>', ':', '|']
+        mrkd_command = f'{self.prefix}{command}'
+        
+        for sign in signs: 
+            mrkd_command = mrkd_command.replace(sign, f'§6{sign}§f')
+        
+        description = '  ↳ ' + description
+
+        self.execute(f'tellraw {target} {hover_and_suggest(mrkd_command, suggest = f"{self.prefix}{command}", hover = mrkd_command)}')
+        self.send_response(target, description)
+
+    async def   get_data                (self, player: str, data: str) -> str:
+        self.requested_data[player] = None
+        self.execute(f"data get entity {player} {data}")
+        max_iter = 1000
+        
+        while not self.requested_data[player] and max_iter:
+            max_iter -= 1
+            await asyncio.sleep(0.01)
+        
+        return self.requested_data.pop(player)
+
+    async def   get_block_data         (self, player: str, data: str) -> str:
+        self.requested_data[player] = None
+        self.execute(f"data get entity {player} {data}")
+        max_iter = 1000
+        
+        while not self.requested_data[player] and max_iter:
+            max_iter -= 1
+            await asyncio.sleep(0.01)
+        
+        return self.requested_data.pop(player)
+    
+    def         disable_command_feedback (self):
+        self.execute('gamerule sendCommandFeedback false')
+
+    def         enable_command_feedback  (self):
+        self.execute('gamerule sendCommandFeedback true')
