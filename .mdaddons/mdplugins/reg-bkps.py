@@ -287,7 +287,6 @@ class mdplugin():
             self.save_whitelist()
             self.server.send_response(player, '✔ Whitelist limpiada.')
 
-
     async def   listener_events(self, log : str):
         if not 'INFO]:' in log: 
             pass
