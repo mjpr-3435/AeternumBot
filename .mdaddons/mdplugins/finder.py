@@ -12,7 +12,7 @@ import unicodedata
 from datetime import datetime
 
 from Classes.AeServer import AeServer
-from mcdis_rcon.utils import hover, hover_and_suggest, extras
+from mcdis_rcon.utils import hover_and_suggest, extras
 
 class mdplugin():
     def __init__(self, server: AeServer):
