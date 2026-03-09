@@ -13,7 +13,7 @@ class mdaddon():
         self.client               = client
         self.persistent_tasks     = []
         self.config_mdplugins = \
-            {   'SMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'reg-bkps.py',                   'tts_addon.py', 'execute.py', 'scoreboard.py', 'md-bkps.py'],
+            {   'SMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'reg-bkps.py',                   'tts_addon.py', 'execute.py', 'scoreboard.py', 'md-bkps.py', 'finder.py'],
                 'CMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'reg-bkps.py',                   'tts_addon.py', 'op.py'],
                 'MMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'reg-bkps.py', 'reg-updater.py', 'tts_addon.py', 'op.py'],
                 'PMP'           : ['manager.py', 'chatbridge.py', 'calc.py', 'join_motd_ae.py', 'here.py', 'reg-bkps.py', 'reg-updater.py', 'tts_addon.py', 'op.py'],

@@ -5,6 +5,10 @@ import re
 import struct
 import time
 import json
+import csv
+import urllib.request
+import urllib.error
+import unicodedata
 from datetime import datetime
 
 from Classes.AeServer import AeServer
@@ -18,6 +22,13 @@ class mdplugin():
         self.last_find_query        = {}
         self.find_region_cache      = {}
         self.find_cache_ttl_seconds = 15 * 60
+        self.minecraft_lang_version = "1.21.4"
+        self.find_marker_cleanup_tasks = {}
+        self.item_lang_index        = {
+            'item_ids': set(),
+            'by_en_name': {},
+            'by_es_name': {},
+        }
         self.scan_flash_duration_seconds = 10 * 60
         self.scan_flash_active      = set()
         self.last_scan_error_log    = {}
@@ -47,8 +58,18 @@ class mdplugin():
         self.reg_bkps_dir = os.path.join(self.server.path_plugins, 'finder')
         os.makedirs(self.reg_bkps_dir, exist_ok = True)
         self.meta_path = os.path.join(self.reg_bkps_dir, 'finder_meta.json')
+        self.find_cache_path = os.path.join(self.reg_bkps_dir, 'finder_find_cache.json')
+        self.lang_dir = os.path.join(self.reg_bkps_dir, 'lang')
+        os.makedirs(self.lang_dir, exist_ok = True)
+        safe_version = self.minecraft_lang_version.replace('.', '_')
+        self.item_lang_csv_path = os.path.join(self.lang_dir, f'minecraft_item_lang_{safe_version}.csv')
+        self.exclude_path = os.path.join(self.reg_bkps_dir, 'finder_excludes.json')
+        self.scan_excluded_blocks = self._load_scan_excluded_blocks()
         self.places_meta = self._load_places_meta()
         self._load_rcon_settings()
+        self._ensure_item_lang_csv()
+        self._load_item_lang_index()
+        self._load_find_region_cache()
 
         self.disable_command_feedback()
 
@@ -75,14 +96,16 @@ class mdplugin():
             self.server.show_command(player, 'fd list', 'Lista los lugares guardados.')
             self.server.show_command(player, 'fd scan <name> [-v]', 'Crea/actualiza un lugar. Con -v muestra flashes del scan.')
             self.server.show_command(player, 'fd check [<x> <y> <z> | opcional]', 'Verifica si un bloque entra como contenedor para scan.')
+            self.server.show_command(player, 'fd toggle-block [<x> <y> <z> | opcional]', 'Alterna exclusión de bloque para que scan lo omita.')
             self.server.show_command(player, 'fd scan log', 'Muestra errores del ultimo scan.')
             self.server.show_command(player, 'fd scan clean', 'Limpia todos los flashes activos del scan.')
             self.server.show_command(player, 'fd remove <name>', 'Elimina el lugar guardado <name>.')
+            self.server.show_command(player, 'fd ensure_csv', 'Verifica/crea el CSV de traducciones de ítems.')
+            self.server.show_command(player, 'fd show_excludes', 'Muestra bloques excluidos durante 10 segundos.')
 
         elif self.server.is_command(message, 'find'):
-            args = message.removeprefix(f'{self.server.prefix}find').strip().split()
-
-            if len(args) != 1:
+            raw_query = message.removeprefix(f'{self.server.prefix}find').strip()
+            if not raw_query:
                 self.server.send_response(player, "§c✖§f Uso: find <item>")
                 return
 
@@ -94,7 +117,12 @@ class mdplugin():
                 )
                 return
 
-            await self._search_on_place(player, default_place, args[0].strip().lower())
+            item_id = self._resolve_find_item_id(raw_query)
+            if not item_id:
+                self.server.send_response(player, f"§c✖§f Ítem no válido: §e{raw_query}")
+                return
+
+            await self._search_on_place(player, default_place, item_id)
             return
 
         elif not player in self.server.admins:
@@ -178,6 +206,109 @@ class mdplugin():
                 asyncio.create_task(self._flash_check_location(dim, x, y, z, block_name="minecraft:red_stained_glass"))
             return
 
+        elif self.server.is_command(message, 'fd toggle-block'):
+            raw_args = message.removeprefix(f'{self.server.prefix}fd toggle-block').strip()
+            args = raw_args.split() if raw_args else []
+
+            if len(args) not in (0, 3):
+                self.server.send_response(player, "§c✖§f Uso: fd toggle-block [x y z]")
+                return
+
+            pos, dim = await self.get_player_position(player)
+            if len(args) == 3:
+                try:
+                    x = int(args[0])
+                    y = int(args[1])
+                    z = int(args[2])
+                except ValueError:
+                    self.server.send_response(player, "§c✖§f Coordenadas inválidas. Usa enteros: fd toggle-block <x> <y> <z>")
+                    return
+            else:
+                x = math.floor(pos[0])
+                y = math.floor(pos[1]) - 1
+                z = math.floor(pos[2])
+
+            was_excluded = self._is_scan_block_excluded(dim, x, y, z)
+            self._set_scan_block_excluded(dim, x, y, z, excluded=(not was_excluded))
+
+            if was_excluded:
+                self.server.send_response(player, f"§a✔§f Bloque removido de exclusión: §7[{dim} {x} {y} {z}]")
+                asyncio.create_task(
+                    self._flash_toggle_block_location_falling(
+                        dim,
+                        x,
+                        y,
+                        z,
+                        block_name="minecraft:lime_stained_glass",
+                        duration=2.0
+                    )
+                )
+            else:
+                self.server.send_response(player, f"§e✔§f Bloque excluido de scan: §7[{dim} {x} {y} {z}]")
+                asyncio.create_task(
+                    self._flash_toggle_block_location_falling(
+                        dim,
+                        x,
+                        y,
+                        z,
+                        block_name="minecraft:red_stained_glass",
+                        duration=2.0
+                    )
+                )
+            return
+
+        elif self.server.is_command(message, 'fd show_excludes'):
+            await self._show_excluded_blocks_markers(player, duration=10.0)
+            return
+
+        elif self.server.is_command(message, 'fd ensure_csv'):
+            force_rebuild = message.removeprefix(f'{self.server.prefix}fd ensure_csv').strip().lower() in ('-f', '--force')
+            if force_rebuild and os.path.exists(self.item_lang_csv_path):
+                try:
+                    os.remove(self.item_lang_csv_path)
+                except Exception as e:
+                    self.server.send_response(player, f"§c✖§f No se pudo recrear CSV: §7{e}")
+                    return
+            status = self._ensure_item_lang_csv()
+            code = status.get('status')
+            version_note = f" §8| Versión: §f{self.minecraft_lang_version}"
+            if code == 'exists':
+                self.server.send_response(player, f"§7CSV ya existe: §f{self.item_lang_csv_path}{version_note}")
+            elif code == 'created':
+                self._load_item_lang_index()
+                en_source = status.get('en_source', 'en_us')
+                source_note = f" §8| EN: §f{en_source}" if en_source else ""
+                self.server.send_response(
+                    player,
+                    f"§a✔§f CSV creado: §f{self.item_lang_csv_path} §8| Filas: §f{status.get('rows', 0)}{source_note}{version_note}"
+                )
+                downloaded = status.get('downloaded_langs', [])
+                if downloaded:
+                    self.server.send_response(player, f"§8[Finder] Descargados OK: §f{', '.join(downloaded)}")
+            elif code == 'missing_en_us':
+                self.server.send_response(player, f"§c✖§f No se pudo crear CSV: no se pudo descargar §een_us§f.{version_note}")
+            elif code == 'download_errors':
+                missing = ", ".join(status.get('missing_langs', []))
+                self.server.send_response(
+                    player,
+                    f"§c✖§f No se pudo crear CSV. Faltan langs: §e{missing}{version_note}"
+                )
+                downloaded = status.get('downloaded_langs', [])
+                if downloaded:
+                    self.server.send_response(player, f"§8[Finder] Descargados OK: §f{', '.join(downloaded)}")
+                errors = status.get('errors', [])
+                if errors:
+                    self.server.send_response(player, "§8[Finder] Errores de acceso:")
+                    for err in errors:
+                        self.server.send_response(player, f"§7- {err}")
+            elif code == 'no_items':
+                self.server.send_response(player, "§c✖§f No se pudo crear CSV: no se encontraron claves §eitem.minecraft.*§f.")
+            elif code == 'write_error':
+                self.server.send_response(player, f"§c✖§f Error escribiendo CSV: §7{status.get('error', 'desconocido')}")
+            else:
+                self.server.send_response(player, "§c✖§f No se pudo crear/verificar el CSV.")
+            return
+
         elif self.server.is_command(message, 'fd scan clean'):
             await self._clean_scan_flash_markers(player)
             return
@@ -233,6 +364,9 @@ class mdplugin():
             if name in self.places_meta:
                 self.places_meta.pop(name, None)
                 self._save_places_meta()
+            if name in self.find_region_cache:
+                self.find_region_cache.pop(name, None)
+                self._save_find_region_cache()
             self.server.send_response(player, f"✔ Lugar eliminado: {name}")
             self.show_places(player)
 
@@ -430,6 +564,280 @@ class mdplugin():
         try:
             with open(self.meta_path, 'w', encoding='utf-8') as f:
                 json.dump(self.places_meta, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+    def         _exclude_block_key(self, dim: str, x: int, y: int, z: int):
+        return f"{dim}|{int(x)}|{int(y)}|{int(z)}"
+
+    def         _load_scan_excluded_blocks(self):
+        if not os.path.exists(self.exclude_path):
+            return set()
+        try:
+            with open(self.exclude_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                return set(str(x) for x in data)
+        except Exception:
+            pass
+        return set()
+
+    def         _save_scan_excluded_blocks(self):
+        try:
+            with open(self.exclude_path, 'w', encoding='utf-8') as f:
+                json.dump(sorted(self.scan_excluded_blocks), f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+    def         _is_scan_block_excluded(self, dim: str, x: int, y: int, z: int):
+        key = self._exclude_block_key(dim, x, y, z)
+        return key in self.scan_excluded_blocks
+
+    def         _set_scan_block_excluded(self, dim: str, x: int, y: int, z: int, excluded: bool):
+        key = self._exclude_block_key(dim, x, y, z)
+        if excluded:
+            self.scan_excluded_blocks.add(key)
+        else:
+            self.scan_excluded_blocks.discard(key)
+        self._save_scan_excluded_blocks()
+
+    def         _download_lang_json(self, lang_code: str):
+        version = self.minecraft_lang_version
+        urls = [
+            f"https://mcasset.cloud/{version}/assets/minecraft/lang/{lang_code}.json",
+            f"https://raw.githubusercontent.com/misode/mcmeta/{version}-assets/assets/minecraft/lang/{lang_code}.json",
+            f"https://raw.githubusercontent.com/misode/mcmeta/{version}-summary/assets/minecraft/lang/{lang_code}.json",
+            f"https://raw.githubusercontent.com/tunwinaung742/Minecraft-All-Lang/main/{lang_code}.json",
+            f"https://raw.githubusercontent.com/toxicity188/all-minecraft-language/main/{lang_code}.json",
+        ]
+
+        errors = []
+        for url in urls:
+            try:
+                with urllib.request.urlopen(url, timeout=10) as response:
+                    if response.status != 200:
+                        errors.append(f"{lang_code} -> {url} [HTTP {response.status}]")
+                        continue
+                    payload = response.read().decode('utf-8')
+                data = json.loads(payload)
+                if isinstance(data, dict):
+                    return data, []
+                errors.append(f"{lang_code} -> {url} [JSON inválido]")
+            except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError, UnicodeDecodeError) as e:
+                errors.append(f"{lang_code} -> {url} [{type(e).__name__}]")
+            except Exception as e:
+                errors.append(f"{lang_code} -> {url} [{type(e).__name__}]")
+                continue
+
+        return None, errors
+
+    def         _ensure_item_lang_csv(self):
+        # crear solo si falta; no regenerar en cada inicio
+        if os.path.exists(self.item_lang_csv_path):
+            return {'status': 'exists'}
+
+        lang_priority = ['en_us', 'es_es', 'es_mx', 'es_ar', 'es_cl', 'es_ec', 'es_uy', 'es_ve']
+        lang_data = {}
+        download_errors = []
+        downloaded_langs = []
+
+        for lang_code in lang_priority:
+            data, errors = self._download_lang_json(lang_code)
+            if isinstance(data, dict):
+                lang_data[lang_code] = data
+                downloaded_langs.append(lang_code)
+            if errors:
+                download_errors.extend(errors)
+
+        # verificar todos los langs antes de crear el csv
+        missing_langs = [x for x in lang_priority if x not in lang_data]
+        if missing_langs:
+            return {
+                'status': 'download_errors',
+                'errors': download_errors,
+                'missing_langs': missing_langs,
+                'downloaded_langs': downloaded_langs,
+            }
+
+        en_us = lang_data.get('en_us')
+        if not isinstance(en_us, dict):
+            return {'status': 'missing_en_us'}
+
+        item_ids = []
+        for key in en_us.keys():
+            if not isinstance(key, str):
+                continue
+            if key.startswith('item.minecraft.'):
+                item_ids.append('minecraft:' + key.removeprefix('item.minecraft.'))
+                continue
+            if not key.startswith('block.minecraft.'):
+                continue
+            item_ids.append('minecraft:' + key.removeprefix('block.minecraft.'))
+        item_ids = sorted(set(item_ids))
+
+        if not item_ids:
+            return {'status': 'no_items'}
+
+        headers = ['item_id', 'en_us'] + [x for x in lang_priority if x != 'en_us']
+
+        try:
+            with open(self.item_lang_csv_path, 'w', encoding='utf-8', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(headers)
+
+                for item_id in item_ids:
+                    suffix = item_id.removeprefix('minecraft:')
+                    item_key = 'item.minecraft.' + suffix
+                    block_key = 'block.minecraft.' + suffix
+                    row = [item_id]
+                    row.append(str(en_us.get(item_key, en_us.get(block_key, '')) or ''))
+
+                    for lang_code in headers[2:]:
+                        lang_dict = lang_data.get(lang_code, {})
+                        if isinstance(lang_dict, dict):
+                            text = lang_dict.get(item_key, lang_dict.get(block_key, ''))
+                        else:
+                            text = ''
+                        row.append(str(text or ''))
+                    writer.writerow(row)
+            return {
+                'status': 'created',
+                'rows': len(item_ids),
+                'en_source': 'en_us',
+                'downloaded_langs': downloaded_langs,
+            }
+        except Exception as e:
+            # no detener el plugin si falla creación de csv
+            return {'status': 'write_error', 'error': str(e)}
+
+    def         _normalize_find_text(self, text: str):
+        raw = (text or "").strip().lower()
+        raw = unicodedata.normalize('NFKD', raw)
+        raw = ''.join(ch for ch in raw if not unicodedata.combining(ch))
+        raw = re.sub(r'\s+', ' ', raw).strip()
+        return raw
+
+    def         _load_item_lang_index(self):
+        index = {
+            'item_ids': set(),
+            'by_en_name': {},
+            'by_es_name': {},
+        }
+
+        if not os.path.exists(self.item_lang_csv_path):
+            self.item_lang_index = index
+            return
+
+        try:
+            with open(self.item_lang_csv_path, 'r', encoding='utf-8-sig', newline='') as f:
+                reader = csv.DictReader(f)
+                if not reader.fieldnames:
+                    self.item_lang_index = index
+                    return
+
+                fieldnames = [str(x).strip().lstrip('\ufeff') for x in reader.fieldnames]
+                es_columns = [x for x in fieldnames if x.startswith('es_')]
+
+                for row in reader:
+                    normalized_row = {}
+                    for k, v in row.items():
+                        nk = str(k).strip().lstrip('\ufeff')
+                        normalized_row[nk] = v
+
+                    item_id = (normalized_row.get('item_id') or '').strip().lower()
+                    if not item_id:
+                        continue
+                    index['item_ids'].add(item_id)
+
+                    en_name = self._normalize_find_text(normalized_row.get('en_us') or '')
+                    if en_name and en_name not in index['by_en_name']:
+                        index['by_en_name'][en_name] = item_id
+
+                    for col in es_columns:
+                        es_name = self._normalize_find_text(normalized_row.get(col) or '')
+                        if es_name and es_name not in index['by_es_name']:
+                            index['by_es_name'][es_name] = item_id
+        except Exception:
+            pass
+
+        self.item_lang_index = index
+
+    def         _resolve_find_item_id(self, raw_query: str):
+        query = self._normalize_find_text(raw_query)
+        if not query:
+            return None
+
+        item_ids = self.item_lang_index.get('item_ids', set())
+        if not item_ids and os.path.exists(self.item_lang_csv_path):
+            self._load_item_lang_index()
+            item_ids = self.item_lang_index.get('item_ids', set())
+        if not item_ids:
+            # fallback si no hay índice cargado
+            candidate = query if query.startswith('minecraft:') else f"minecraft:{query.replace(' ', '_')}"
+            candidate = candidate.lower()
+            return candidate if re.fullmatch(r'minecraft:[a-z0-9_]+', candidate) else None
+
+        if query.startswith('minecraft:'):
+            candidate = query
+            if re.fullmatch(r'minecraft:[a-z0-9_]+', candidate) and candidate in item_ids:
+                return candidate
+            return None
+
+        # formato técnico (ej. golden_apple)
+        if '_' in query or re.fullmatch(r'[a-z0-9_]+', query):
+            candidate = f"minecraft:{query}"
+            if candidate in item_ids:
+                return candidate
+
+        # intento directo por nombre inglés normalizado (con espacios)
+        en_match = self.item_lang_index.get('by_en_name', {}).get(query)
+        if en_match:
+            return en_match
+
+        # intento por nombre español normalizado
+        es_match = self.item_lang_index.get('by_es_name', {}).get(query)
+        if es_match:
+            return es_match
+
+        # fallback final: espacios -> _
+        candidate = f"minecraft:{query.replace(' ', '_')}"
+        if candidate in item_ids:
+            return candidate
+
+        return None
+
+    def         _load_find_region_cache(self):
+        if not os.path.exists(self.find_cache_path):
+            self.find_region_cache = {}
+            return
+
+        try:
+            with open(self.find_cache_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            if not isinstance(data, dict):
+                self.find_region_cache = {}
+                return
+
+            now_ts = time.time()
+            restored = {}
+            for name, entry in data.items():
+                if not isinstance(entry, dict):
+                    continue
+                scanned_at = entry.get('scanned_at', 0)
+                if not isinstance(scanned_at, (int, float)):
+                    continue
+                if (now_ts - scanned_at) > self.find_cache_ttl_seconds:
+                    continue
+                restored[name] = entry
+
+            self.find_region_cache = restored
+        except Exception:
+            self.find_region_cache = {}
+
+    def         _save_find_region_cache(self):
+        try:
+            with open(self.find_cache_path, 'w', encoding='utf-8') as f:
+                json.dump(self.find_region_cache, f, ensure_ascii=False, indent=2)
         except Exception:
             pass
 
@@ -690,6 +1098,18 @@ class mdplugin():
         try:
             for (_, _), blocks in region_by_chunk.items():
                 for (x, y, z) in blocks:
+                    if self._is_scan_block_excluded(dim, x, y, z):
+                        processed_blocks += 1
+                        now = time.perf_counter()
+                        if total_blocks and (now - last_progress_at >= 2.0 or processed_blocks == total_blocks):
+                            percent = (processed_blocks / total_blocks) * 100
+                            self.server.send_response(
+                                player,
+                                f"§8[Finder] Progreso: §f{processed_blocks}/{total_blocks} §8({percent:.1f}%) §7| Encontrados: §e{total_found}"
+                            )
+                            last_progress_at = now
+                        continue
+
                     inspect = await self._inspect_container_candidate(dim, x, y, z)
                     if str(inspect.get('reason', '')).startswith('Error RCON:'):
                         scan_errors += 1
@@ -801,13 +1221,28 @@ class mdplugin():
     def         enable_command_feedback  (self):
         self.server.execute('gamerule sendCommandFeedback true')
 
-    async def   _mark_found_locations(self, locations: list[tuple[str,int,int,int]], duration: float = 10.0):
+    def         _find_marker_tag_for_player(self, player: str):
+        safe = re.sub(r'[^a-zA-Z0-9_]', '_', player)
+        return f"finder_found_{safe}"
+
+    def         _cancel_find_marker_cleanup_for_player(self, player: str):
+        task = self.find_marker_cleanup_tasks.pop(player, None)
+        if task and not task.done():
+            task.cancel()
+
+    def         _clear_find_markers_for_player(self, player: str):
+        self._cancel_find_marker_cleanup_for_player(player)
+        tag = self._find_marker_tag_for_player(player)
+        self.server.execute(f'kill @e[tag={tag}]')
+
+    async def   _mark_found_locations(self, player: str, locations: list[tuple[str,int,int,int]], duration: float = 10.0):
         """
         locations: [(dim, x, y, z), ...]
         """
 
-        tag = "finder_found"
+        tag = self._find_marker_tag_for_player(player)
         loaded_chunks = set()
+        should_kill_markers = True
 
         for (dim, x, _, z) in locations:
             chunk_x = x // 16
@@ -848,13 +1283,20 @@ class mdplugin():
 
             # mantener marcador casi 10 segundos
             await asyncio.sleep(duration)
+        except asyncio.CancelledError:
+            should_kill_markers = False
+            raise
         finally:
-            for dim in {d for (d, _, _, _) in locations}:
-                self.server.execute(f'execute in minecraft:{dim} run kill @e[tag={tag}]')
+            if should_kill_markers:
+                for dim in {d for (d, _, _, _) in locations}:
+                    self.server.execute(f'execute in minecraft:{dim} run kill @e[tag={tag}]')
             for (dim, chunk_x, chunk_z) in loaded_chunks:
                 self.server.execute(
                     f'execute in minecraft:{dim} run forceload remove {chunk_x * 16} {chunk_z * 16}'
                 )
+            current_task = asyncio.current_task()
+            if self.find_marker_cleanup_tasks.get(player) is current_task:
+                self.find_marker_cleanup_tasks.pop(player, None)
 
     async def   _flash_scan_location(self, dim: str, x: int, y: int, z: int):
         self._scan_marker_seq += 1
@@ -923,6 +1365,114 @@ class mdplugin():
         )
         await asyncio.sleep(duration)
         self.server.execute(f'execute in minecraft:{dim} run kill @e[tag={tag}]')
+
+    async def   _flash_toggle_block_location_falling(
+        self,
+        dim: str,
+        x: int,
+        y: int,
+        z: int,
+        block_name: str = "minecraft:red_stained_glass",
+        duration: float = 2.0
+    ):
+        self._scan_marker_seq += 1
+        tag = f"finder_toggle_block_{self._scan_marker_seq}"
+
+        nbt = (
+            '{'
+            f'BlockState:{{Name:"{block_name}"}},'
+            'Glowing:1b,'
+            'Invisible:1b,'
+            'Invulnerable:1b,'
+            'PersistenceRequired:1b,'
+            'Silent:1b,'
+            'NoGravity:1b,'
+            'Time:1,'
+            'DropItem:0b,'
+            'HurtEntities:0b,'
+            f'Tags:["{tag}"]'
+            '}'
+        )
+
+        self.server.execute(
+            f'execute in minecraft:{dim} run '
+            f'summon minecraft:falling_block {x+0.5:.1f} {y:.1f} {z+0.5:.1f} {nbt}'
+        )
+        await asyncio.sleep(duration)
+        self.server.execute(f'execute in minecraft:{dim} run kill @e[tag={tag}]')
+
+    async def   _show_excluded_blocks_markers(self, player: str, duration: float = 10.0):
+        if not self.scan_excluded_blocks:
+            self.server.send_response(player, "§7No hay bloques excluidos.")
+            return
+
+        parsed = []
+        for key in self.scan_excluded_blocks:
+            try:
+                dim, sx, sy, sz = key.split('|')
+                parsed.append((dim, int(sx), int(sy), int(sz)))
+            except Exception:
+                continue
+
+        if not parsed:
+            self.server.send_response(player, "§7No hay bloques excluidos válidos.")
+            return
+
+        self._scan_marker_seq += 1
+        common_tag = f"finder_show_excludes_{self._scan_marker_seq}"
+
+        by_dim = {}
+        for dim, x, y, z in parsed:
+            if dim not in by_dim:
+                by_dim[dim] = []
+            by_dim[dim].append((x, y, z))
+
+        loaded_chunks = set()
+        for dim, entries in by_dim.items():
+            for x, _, z in entries:
+                chunk_x = x // 16
+                chunk_z = z // 16
+                key = (dim, chunk_x, chunk_z)
+                if key in loaded_chunks:
+                    continue
+                loaded_chunks.add(key)
+                self.server.execute(
+                    f'execute in minecraft:{dim} run forceload add {chunk_x * 16} {chunk_z * 16}'
+                )
+
+        try:
+            for dim, entries in by_dim.items():
+                for x, y, z in entries:
+                    self._scan_marker_seq += 1
+                    tag = f"finder_show_exclude_{self._scan_marker_seq}"
+                    nbt = (
+                        '{'
+                        'BlockState:{Name:"minecraft:red_stained_glass"},'
+                        'Glowing:1b,'
+                        'Invisible:1b,'
+                        'Invulnerable:1b,'
+                        'PersistenceRequired:1b,'
+                        'Silent:1b,'
+                        'NoGravity:1b,'
+                        'Time:1,'
+                        'DropItem:0b,'
+                        'HurtEntities:0b,'
+                        f'Tags:["{tag}","{common_tag}"]'
+                        '}'
+                    )
+                    self.server.execute(
+                        f'execute in minecraft:{dim} run '
+                        f'summon minecraft:falling_block {x+0.5:.1f} {y:.1f} {z+0.5:.1f} {nbt}'
+                    )
+            self.server.send_response(player, f"§8[Finder] Mostrando excluidos: §f{len(parsed)}")
+            await asyncio.sleep(duration)
+        finally:
+            for dim in by_dim.keys():
+                self.server.execute(f'execute in minecraft:{dim} run kill @e[tag={common_tag}]')
+            for dim, chunk_x, chunk_z in loaded_chunks:
+                self.server.execute(
+                    f'execute in minecraft:{dim} run forceload remove {chunk_x * 16} {chunk_z * 16}'
+                )
 
     async def   _cleanup_scan_flash_marker(self, dim: str, tag: str, delay_seconds: float):
         await asyncio.sleep(delay_seconds)
@@ -1111,9 +1661,6 @@ class mdplugin():
     def         _send_found_coordinates(self, player: str, locations: list[tuple[str, int, int, int]]):
         if not locations:
             return
-        preview_limit = 3
-        preview = locations[:preview_limit]
-        remaining = max(0, len(locations) - len(preview))
         dim_colors = {
             'overworld': 'green',
             'minecraft:overworld': 'green',
@@ -1131,34 +1678,61 @@ class mdplugin():
             'minecraft:the_end': 'End',
         }
 
-        actions = ['{"text":"Primeras coincidencias: ","color":"gray"}']
-        for idx, (dim, x, y, z) in enumerate(preview):
-            color = dim_colors.get(dim, 'white')
-            actions.append(
-                hover(
-                    f'[{x} {y} {z}]',
-                    color=color,
-                    hover=f"Dimensión: {dim_labels.get(dim, dim)}"
-                )
-            )
-            if idx < len(preview) - 1:
-                actions.append('{"text":" ","color":"gray"}')
+        # self.server.send_response(player, "§7Contenedores:")
+        # chunk_size = 3
+        # for start in range(0, len(locations), chunk_size):
+        #     chunk = locations[start:start + chunk_size]
+        #     actions = ['{"text":"- ","color":"gray"}']
 
-        if remaining > 0:
-            actions.append(f'{{"text":"  y {remaining} más.","color":"gray"}}')
+        #     for idx, (dim, x, y, z) in enumerate(chunk):
+        #         color = dim_colors.get(dim, 'white')
+        #         actions.append(
+        #             hover(
+        #                 f'[{x} {y} {z}]',
+        #                 color=color,
+        #                 hover=f"Dimensión: {dim_labels.get(dim, dim)}"
+        #             )
+        #         )
+        #         if idx < len(chunk) - 1:
+        #             actions.append('{"text":" ","color":"gray"}')
 
-        self.server.execute(f'tellraw {player} {extras(actions)}')
+        #     self.server.execute(f'tellraw {player} {extras(actions)}')
 
     async def   _trace_paths_from_player_to_locations(
         self,
         player: str,
         locations: list[tuple[str, int, int, int]],
+        origin_pos: tuple[float, float, float] | None = None,
+        origin_dim: str | None = None,
         duration: float = 10.0,
-        interval: float = 1.0,
+        interval: float = 2.0,
         step: float = 1.0,
-        max_paths: int = 20
+        max_paths: int = 20,
+        max_distance: float = 128.0,
+        max_refreshes: int = 4
     ):
         if not locations:
+            return
+
+        def distance(a: tuple[float, float, float], b: tuple[float, float, float]):
+            dx = b[0] - a[0]
+            dy = b[1] - a[1]
+            dz = b[2] - a[2]
+            return math.sqrt(dx * dx + dy * dy + dz * dz)
+
+        filtered_locations = list(locations)
+        if origin_pos is not None and origin_dim:
+            ox, oy, oz = origin_pos
+            tmp = []
+            for (dim, x, y, z) in locations:
+                if dim != origin_dim:
+                    continue
+                d = distance((ox, oy, oz), (x + 0.5, y + 0.5, z + 0.5))
+                if d <= max_distance:
+                    tmp.append((dim, x, y, z))
+            filtered_locations = tmp
+
+        if not filtered_locations:
             return
 
         def draw_line(dim: str, x1: float, y1: float, z1: float, x2: float, y2: float, z2: float):
@@ -1184,21 +1758,21 @@ class mdplugin():
                 )
 
         t_end = duration
-        while t_end > 0:
-            try:
-                player_pos, player_dim = await self.get_player_position(player)
-            except Exception:
+        refresh_count = 0
+        while t_end > 0 and refresh_count < max_refreshes:
+            if origin_pos is None or not origin_dim:
                 return
 
-            same_dim_locations = [(d, x, y, z) for (d, x, y, z) in locations if d == player_dim]
+            same_dim_locations = [(d, x, y, z) for (d, x, y, z) in filtered_locations if d == origin_dim]
             same_dim_locations = same_dim_locations[:max_paths]
 
-            px, py, pz = player_pos
+            px, py, pz = origin_pos
             for (_, x, y, z) in same_dim_locations:
-                draw_line(player_dim, px, py + 0.8, pz, x + 0.5, y + 0.8, z + 0.5)
+                draw_line(origin_dim, px, py + 0.8, pz, x + 0.5, y + 0.8, z + 0.5)
 
             await asyncio.sleep(interval)
             t_end -= interval
+            refresh_count += 1
 
     def         _build_region_by_chunk(self, xmin, xmax, ymin, ymax, zmin, zmax):
         region_by_chunk = {}
@@ -1388,10 +1962,12 @@ class mdplugin():
 
             self.find_region_cache[name] = {
                 'scanned_at': time.time(),
+                'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 'csv_mtime': csv_mtime,
                 'rows_count': len(rows),
                 'inventories': list(inventories_snapshot),
             }
+            self._save_find_region_cache()
             self.server.send_response(player, "§8[Finder] Caché lista.")
 
         found_locations = []
@@ -1403,8 +1979,21 @@ class mdplugin():
 
         found = len(found_locations)
         if found_locations:
-            asyncio.create_task(self._mark_found_locations(found_locations))
-            asyncio.create_task(self._trace_paths_from_player_to_locations(player, found_locations))
+            self._clear_find_markers_for_player(player)
+            marker_task = asyncio.create_task(self._mark_found_locations(player, found_locations))
+            self.find_marker_cleanup_tasks[player] = marker_task
+            try:
+                origin_pos, origin_dim = await self.get_player_position(player)
+            except Exception:
+                origin_pos, origin_dim = None, None
+            asyncio.create_task(
+                self._trace_paths_from_player_to_locations(
+                    player,
+                    found_locations,
+                    origin_pos=origin_pos,
+                    origin_dim=origin_dim
+                )
+            )
 
         self.server.send_response(player, f"§bCoincidencias: §e{found}")
         self._send_found_coordinates(player, found_locations)
