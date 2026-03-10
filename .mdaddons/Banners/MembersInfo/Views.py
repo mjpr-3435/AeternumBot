@@ -17,7 +17,11 @@ class banner_views(discord.ui.View):
     @discord.ui.button(label = 'Whitelist',
                        style = discord.ButtonStyle.gray)
     async def whitelist_button(self, interaction:discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message(embed= whitelist_embed(), view = WhitelistListView(), ephemeral = True)
+        await interaction.response.send_message(
+            embed=whitelist_embed(),
+            view=WhitelistListView(is_admin_request=isAdmin(interaction.user)),
+            ephemeral=True
+        )
 
     @discord.ui.button(label = 'Server Jobs',
                        style = discord.ButtonStyle.gray)
@@ -34,6 +38,7 @@ class AddNicknameModal(discord.ui.Modal, title = "Agregar a la Whitelist"):
         await interaction.response.defer(ephemeral=True, thinking=True)
         nickname = self.nickname.value.replace(" ","")
         df_whitelist_log = pd.read_csv(whitelist_log, index_col='index')
+        inactives_only = _message_is_inactives_mode(interaction.message)
 
         if nickname in df_whitelist_log['nickname'].values:
             embed = make_embed(interaction.client, 'El usuario ya estaba en la whitelist.', nickname, interaction.user.mention)
@@ -55,7 +60,10 @@ class AddNicknameModal(discord.ui.Modal, title = "Agregar a la Whitelist"):
 
         embed = make_embed(interaction.client, 'Usuario añadido.', nickname, interaction.user.mention)
         await interaction.followup.send(embed=embed)
-        await interaction.followup.edit_message(message_id=interaction.message.id, embed = whitelist_embed())
+        await interaction.followup.edit_message(
+            message_id=interaction.message.id,
+            embed=whitelist_embed(inactives_only=inactives_only)
+        )
 
         channel = interaction.client.get_channel(config['Channel ID'])
         whitelist_log_thread = await thread('Whitelist Log', channel)
@@ -71,6 +79,7 @@ class RemoveNicknameModal(discord.ui.Modal, title = "Remover de la Whitelist"):
         await interaction.response.defer(ephemeral=True, thinking=True)
         nickname = self.nickname.value
         df = pd.read_csv(whitelist_log, index_col='index')
+        inactives_only = _message_is_inactives_mode(interaction.message)
 
         if nickname not in df['nickname'].values:
             embed = make_embed(interaction.client, 'El usuario no estaba en la whitelist.', nickname, interaction.user.mention)
@@ -86,7 +95,10 @@ class RemoveNicknameModal(discord.ui.Modal, title = "Remover de la Whitelist"):
 
         embed = make_embed(interaction.client, 'Usuario removido.', nickname, interaction.user.mention)
         await interaction.followup.send(embed=embed)
-        await interaction.followup.edit_message(message_id=interaction.message.id, embed = whitelist_embed())
+        await interaction.followup.edit_message(
+            message_id=interaction.message.id,
+            embed=whitelist_embed(inactives_only=inactives_only)
+        )
 
         channel         = interaction.client.get_channel(config['Channel ID'])
         whitelist_log_thread   = await thread('Whitelist Log', channel)
@@ -152,35 +164,50 @@ def update_whitelist_on_servers(client:McDisClient):
         server.execute('whitelist reload')
 
 class WhitelistListView(discord.ui.View):
-    def __init__(self):
+    def __init__(self, is_admin_request: bool = False):
         super().__init__(timeout = 300)
-        self.len            = len(pd.read_csv(whitelist_log))
-        self.max_page       = math.ceil(self.len/30)
+        self.is_admin_request = is_admin_request
+        self.only_inactives = False
+        self.len = 0
+        self.max_page = 1
         self.page           = 1
-        
+
+        self._refresh_pagination()
         self.add_item(UpdateButton())
         self.add_item(PreviousPageButton())
         self.add_item(NextPageButton())
         self.add_item(AddButton())
         self.add_item(RemoveButton())
+        if self.is_admin_request:
+            self.add_item(InactivesToggleButton())
+            self.add_item(PurgeInactivesButton())
+
+    def _refresh_pagination(self):
+        self.len = len(_get_whitelist_dataframe(self.only_inactives))
+        self.max_page = max(1, math.ceil(self.len / 30))
+        self.page = min(max(self.page, 1), self.max_page)
 
     async def   _update_page       (self, interaction: discord.Interaction):
+        self._refresh_pagination()
+
         if not interaction.response.is_done():
             await interaction.response.defer()
 
         await interaction.followup.edit_message(
             message_id = interaction.message.id,
-            embed = whitelist_embed(self.page),
+            embed = whitelist_embed(self.page, inactives_only=self.only_inactives),
             view = self
         )
     
     async def   _update_interface (self, interaction: discord.Interaction):
+        self._refresh_pagination()
+
         if not interaction.response.is_done():
             await interaction.response.defer()
 
         await interaction.followup.edit_message(
             message_id = interaction.message.id,
-            embed = whitelist_embed(self.page),
+            embed = whitelist_embed(self.page, inactives_only=self.only_inactives),
             view = self
         )
 
@@ -213,6 +240,34 @@ class NextPageButton        (discord.ui.Button):
 
         await self.view._update_page(interaction)
 
+class InactivesToggleButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label='All', style=discord.ButtonStyle.green)
+        self.view : WhitelistListView
+
+    async def callback(self, interaction: discord.Interaction):
+        if not isAdmin(interaction.user):
+            await interaction.response.send_message('✖ No tienes permisos.', ephemeral=True, delete_after=1)
+            return
+
+        self.view.only_inactives = not self.view.only_inactives
+        self.view.page = 1
+        self.label = 'Inactives' if self.view.only_inactives else 'All'
+        self.style = discord.ButtonStyle.gray if self.view.only_inactives else discord.ButtonStyle.green
+        await self.view._update_interface(interaction)
+
+class PurgeInactivesButton(discord.ui.Button):
+    def __init__(self):
+        super().__init__(label='Purge', style=discord.ButtonStyle.red)
+        self.view : WhitelistListView
+
+    async def callback(self, interaction: discord.Interaction):
+        if not isAdmin(interaction.user):
+            await interaction.response.send_message('✖ No tienes permisos.', ephemeral=True, delete_after=1)
+            return
+
+        await interaction.response.send_modal(PurgeInactivesModal(self.view))
+
 class AddButton(discord.ui.Button):
     def __init__(self):
         super().__init__(label = 'Add', style=discord.ButtonStyle.blurple)
@@ -241,21 +296,167 @@ class RemoveButton(discord.ui.Button):
         
         await interaction.response.send_modal(RemoveNicknameModal())
 
+class PurgeInactivesModal(discord.ui.Modal, title="Purge Inactives"):
+    confirmation = discord.ui.TextInput(
+        label='Escribe PURGE para confirmar',
+        placeholder='PURGE',
+        required=True
+    )
+    exclusions = discord.ui.TextInput(
+        label='Excluir nombres',
+        required=False,
+        style=discord.TextStyle.paragraph
+    )
 
-def whitelist_embed(page: int = 1, page_size: int = 30) -> discord.Embed:
+    def __init__(self, whitelist_view: WhitelistListView):
+        super().__init__()
+        self.whitelist_view = whitelist_view
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        if self.confirmation.value.strip().upper() != 'PURGE':
+            await interaction.followup.send('✖ Confirmación inválida. Debes escribir `PURGE`.', ephemeral=True)
+            return
+
+        excluded_nicknames = _parse_exclusion_lines(self.exclusions.value)
+        removed_nicknames, excluded_applied = purge_inactive_whitelist_entries(excluded_nicknames)
+        update_whitelist_on_servers(interaction.client)
+
+        if removed_nicknames:
+            preview = ', '.join(removed_nicknames[:20])
+            if len(removed_nicknames) > 20:
+                preview += ', ...'
+            await interaction.followup.send(
+                (
+                    f'✔ Purge completado. Removidos: **{len(removed_nicknames)}**\n'
+                    f'`{preview}`'
+                    + (
+                        f"\nExcluidos aplicados: **{len(excluded_applied)}**"
+                        if excluded_applied else
+                        (f"\nExclusiones recibidas: **{len(excluded_nicknames)}** (sin coincidencias inactivas)" if excluded_nicknames else "")
+                    )
+                ),
+                ephemeral=True
+            )
+        else:
+            await interaction.followup.send('✔ No hay inactivos para eliminar.', ephemeral=True)
+
+        channel = interaction.client.get_channel(config['Channel ID'])
+        whitelist_log_thread = await thread('Whitelist Log', channel)
+        action_embed = discord.Embed(
+            title='> **Whitelist SMP**',
+            description=(
+                f"Purge de inactivos ejecutado.\n"
+                f"- **Removidos:** {len(removed_nicknames)}\n"
+                f"- **Nombres removidos:** {_format_nickname_list(removed_nicknames)}\n"
+                f"- **Excluidos aplicados:** {_format_nickname_list(excluded_applied)}\n"
+                f"- **Editado por:** {interaction.user.mention}\n"
+            ),
+            color=0x2f3136
+        )
+        action_embed.set_footer(text='Whitelist System \u200b', icon_url=interaction.client.user.display_avatar)
+        await whitelist_log_thread.send(embed=action_embed)
+
+        await self.whitelist_view._update_interface(interaction)
+
+def _get_whitelist_dataframe(inactives_only: bool = False) -> pd.DataFrame:
     df = pd.read_csv(whitelist_log)
     df = df.sort_values('index').reset_index(drop=True)
+
+    if not inactives_only:
+        return df
+
+    cutoff_date = pd.Timestamp.now() - pd.DateOffset(months=3)
+    parsed_dates = pd.to_datetime(df['date'], format='%Y-%m-%d', errors='coerce')
+    inactive_mask = parsed_dates.isna() | (parsed_dates < cutoff_date)
+    return df[inactive_mask].reset_index(drop=True)
+
+def _message_is_inactives_mode(message: discord.Message | None) -> bool:
+    if not message or not message.embeds:
+        return False
+    footer = message.embeds[0].footer
+    footer_text = (footer.text or "") if footer else ""
+    return 'Inactives' in footer_text
+
+def _parse_exclusion_lines(raw_text: str | None) -> list[str]:
+    if not raw_text:
+        return []
+    return [line.strip() for line in raw_text.splitlines() if line.strip()]
+
+def _format_nickname_list(names: list[str], limit: int = 25) -> str:
+    if not names:
+        return 'Ninguno'
+    shown = names[:limit]
+    text = ', '.join(shown)
+    if len(names) > limit:
+        text += f', ... (+{len(names) - limit})'
+    return text
+
+def purge_inactive_whitelist_entries(excluded_nicknames: list[str] | None = None) -> tuple[list[str], list[str]]:
+    df = pd.read_csv(whitelist_log, index_col='index')
+    inactive_df = _get_whitelist_dataframe(inactives_only=True)
+
+    if inactive_df.empty:
+        return [], []
+
+    excluded_nicknames_lc = {str(nick).lower() for nick in (excluded_nicknames or [])}
+    excluded_applied = []
+    if excluded_nicknames_lc:
+        excluded_applied = (
+            inactive_df[inactive_df['nickname'].astype(str).str.lower().isin(excluded_nicknames_lc)]['nickname']
+            .dropna()
+            .astype(str)
+            .tolist()
+        )
+        inactive_df = inactive_df[
+            ~inactive_df['nickname'].astype(str).str.lower().isin(excluded_nicknames_lc)
+        ].reset_index(drop=True)
+
+    if inactive_df.empty:
+        return [], excluded_applied
+
+    removed_nicknames = inactive_df['nickname'].dropna().astype(str).tolist()
+    removed_nicknames_lc = {nick.lower() for nick in removed_nicknames}
+
+    df = df[~df['nickname'].astype(str).str.lower().isin(removed_nicknames_lc)]
+    df.reset_index(drop=True, inplace=True)
+    df.rename_axis('index', inplace=True)
+    df.to_csv(whitelist_log)
+
+    with open(whitelist_path, 'r', encoding='utf-8') as f:
+        whitelist = json.load(f)
+
+    new_whitelist = [
+        entry for entry in whitelist
+        if str(entry.get("name", "")).lower() not in removed_nicknames_lc
+    ]
+
+    if len(new_whitelist) != len(whitelist):
+        with open(whitelist_path, 'w', encoding='utf-8') as f:
+            json.dump(new_whitelist, f, indent=2)
+
+    return removed_nicknames, excluded_applied
+
+def whitelist_embed(page: int = 1, page_size: int = 30, inactives_only: bool = False) -> discord.Embed:
+    df = _get_whitelist_dataframe(inactives_only=inactives_only)
 
     start = (page - 1) * page_size
     end = min(start + page_size, len(df))
     df_page = df.iloc[start:end]
 
-    show_nick = '\n'.join(f'`{i + 1:>3}`‎ ‎ ‎ `{nick[:16]:>16}`' for nick, i in zip(df_page['nickname'], df_page['index']))
-    show_user = '\n'.join(f'`🧧` <@{uid}>' for uid in df_page['user_id'])
-    show_date = '\n'.join(f'`📆` {date}' for date in df_page['date'])
+    if df_page.empty:
+        show_nick = '`---`'
+        show_user = '`---`'
+        show_date = '`---`'
+    else:
+        show_nick = '\n'.join(f'`{i + 1:>3}`‎ ‎ ‎ `{nick[:16]:>16}`' for nick, i in zip(df_page['nickname'], df_page['index']))
+        show_user = '\n'.join(f'`🧧` <@{uid}>' for uid in df_page['user_id'])
+        show_date = '\n'.join(f'`📆` {date}' for date in df_page['date'])
 
     embed = discord.Embed(color = 0x2f3136)
-    embed.set_footer(icon_url='https://i.postimg.cc/XqQx5rT5/logo.png', text=f'Aeternum Whitelist')
+    footer_mode = 'Inactives' if inactives_only else 'All'
+    embed.set_footer(icon_url='https://i.postimg.cc/XqQx5rT5/logo.png', text=f'Aeternum Whitelist | {footer_mode}')
     embed.add_field(inline=True, name='`  #`‎ ‎ ‎ **Usuario**', value=f'\n{show_nick}')
     embed.add_field(inline=True, name='**Añadido Por**', value=f'\n{show_user}')
     embed.add_field(inline=True, name='**Última Conexión**', value=f'\n{show_date}')

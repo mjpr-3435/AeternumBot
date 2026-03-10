@@ -108,6 +108,13 @@ class mdplugin():
             if not raw_query:
                 self.server.send_response(player, "§c✖§f Uso: find <item>")
                 return
+            raw_parts = raw_query.split()
+            force_cache_refresh = '-f' in raw_parts
+            if force_cache_refresh:
+                raw_query = " ".join(part for part in raw_parts if part != '-f').strip()
+                if not raw_query:
+                    self.server.send_response(player, "§c✖§f Uso: find <item>")
+                    return
 
             default_place = self.initial_default_place
             if not self._place_exists(default_place):
@@ -122,7 +129,7 @@ class mdplugin():
                 self.server.send_response(player, f"§c✖§f Ítem no válido: §e{raw_query}")
                 return
 
-            await self._search_on_place(player, default_place, item_id)
+            await self._search_on_place(player, default_place, item_id, force_cache_refresh=force_cache_refresh)
             return
 
         elif not player in self.server.admins:
@@ -273,14 +280,24 @@ class mdplugin():
             code = status.get('status')
             version_note = f" §8| Versión: §f{self.minecraft_lang_version}"
             if code == 'exists':
-                self.server.send_response(player, f"§7CSV ya existe: §f{self.item_lang_csv_path}{version_note}")
+                size_note = ""
+                try:
+                    size_note = f" §8| Peso: §f{self._format_size(os.path.getsize(self.item_lang_csv_path))}"
+                except Exception:
+                    pass
+                self.server.send_response(player, f"§7CSV ya existe: §f{self.item_lang_csv_path}{size_note}{version_note}")
             elif code == 'created':
                 self._load_item_lang_index()
                 en_source = status.get('en_source', 'en_us')
                 source_note = f" §8| EN: §f{en_source}" if en_source else ""
+                size_note = ""
+                try:
+                    size_note = f" §8| Peso: §f{self._format_size(os.path.getsize(self.item_lang_csv_path))}"
+                except Exception:
+                    pass
                 self.server.send_response(
                     player,
-                    f"§a✔§f CSV creado: §f{self.item_lang_csv_path} §8| Filas: §f{status.get('rows', 0)}{source_note}{version_note}"
+                    f"§a✔§f CSV creado: §f{self.item_lang_csv_path} §8| Filas: §f{status.get('rows', 0)}{size_note}{source_note}{version_note}"
                 )
                 downloaded = status.get('downloaded_langs', [])
                 if downloaded:
@@ -840,6 +857,16 @@ class mdplugin():
                 json.dump(self.find_region_cache, f, ensure_ascii=False, indent=2)
         except Exception:
             pass
+
+    def         _format_size(self, size_bytes: int):
+        units = ["B", "KB", "MB", "GB"]
+        value = float(max(0, size_bytes))
+        for unit in units:
+            if value < 1024 or unit == units[-1]:
+                if unit == "B":
+                    return f"{int(value)} {unit}"
+                return f"{value:.2f} {unit}"
+            value /= 1024
 
     def         _load_rcon_settings(self):
         path = os.path.join(self.server.path_files, 'server', 'server.properties')
@@ -1845,7 +1872,7 @@ class mdplugin():
 
             self.server.execute(f'tellraw {player} {extras(actions)}')
 
-    async def   _search_on_place(self, player: str, name: str, item: str):
+    async def   _search_on_place(self, player: str, name: str, item: str, force_cache_refresh: bool = False):
         rcon_ready, rcon_error = await self._ensure_rcon_ready()
         if not rcon_ready:
             self.server.send_response(player, f"§c✖§f {rcon_error}")
@@ -1880,6 +1907,7 @@ class mdplugin():
         now_ts = time.time()
         cache_entry = self.find_region_cache.get(name)
         use_region_cache = (
+            (not force_cache_refresh) and
             cache_entry is not None and
             (now_ts - cache_entry.get('scanned_at', 0)) <= self.find_cache_ttl_seconds and
             cache_entry.get('csv_mtime') == csv_mtime and
@@ -1891,6 +1919,8 @@ class mdplugin():
             inventories_snapshot = list(cache_entry.get('inventories', []))
             self.server.send_response(player, "§8[Finder] Usando caché.")
         else:
+            if force_cache_refresh:
+                self.server.send_response(player, "§8[Finder] Forzando recreación de caché...")
             loaded_chunks_by_dim = set()
             read_errors = 0
             processed_entries = 0
@@ -1968,7 +1998,14 @@ class mdplugin():
                 'inventories': list(inventories_snapshot),
             }
             self._save_find_region_cache()
-            self.server.send_response(player, "§8[Finder] Caché lista.")
+            try:
+                cache_size = os.path.getsize(self.find_cache_path)
+                self.server.send_response(
+                    player,
+                    f"§8[Finder] Caché lista. §7Archivo: §f{self._format_size(cache_size)}"
+                )
+            except Exception:
+                self.server.send_response(player, "§8[Finder] Caché lista.")
 
         found_locations = []
         for (dim, x, y, z, data_lc) in inventories_snapshot:
