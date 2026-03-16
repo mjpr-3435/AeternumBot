@@ -10,6 +10,7 @@ from Classes.AeServer import AeServer
 class mdplugin():
     def __init__(self, server: AeServer):
         self.server = server
+        self.waiting = False
         self.scheduled_load_backup  = {}
         self.action_confirmed       = False
         self.creating_backup        = False
