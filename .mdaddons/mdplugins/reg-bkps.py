@@ -1,6 +1,7 @@
 import asyncio
 import zipfile
 import os
+import shutil
 
 from datetime import datetime
 from mcdis_rcon.utils import hover_and_suggest, extras, hover, write_in_file, read_file
@@ -13,8 +14,10 @@ class mdplugin():
         self.creating_bkp           = False
         self.waiting                = False
         self.scheduled_backup       = {}
+        self.scheduled_backup_md    = {}
         self.player_positions       = {}
         self.load_confirmed         = False
+        self.loading_bkp            = False
         self.whitelisted_players    = set()
 
         self.reg_bkps_dir = os.path.join(self.server.path_plugins, 'reg-bkps')
@@ -58,7 +61,10 @@ class mdplugin():
             
             if not self.is_admin_or_whitelisted(player) and self.server.name == 'SMP': return
             self.server.show_command(player, 'rb load-bkp <name>', 'Carga el reg-bkp <name>.zip.')
+            self.server.show_command(player, 'rb load-md'         , 'Lista los md-bkps disponibles.')
+            self.server.show_command(player, 'rb load-md <name>'  , 'Carga regiones desde el md-bkp <name>.')
             self.server.show_command(player, 'rb del-bkp <name>' , 'Elimina el reg-bkp <name>.zip.')
+            self.server.show_command(player, 'rb confirm-md'     , 'Confirma la carga del md-bkp especificado.')
             self.server.show_command(player, 'rb confirm'        , 'Confirma la carga del reg-bkp específicado.')
             
             if player in self.server.admins:
@@ -189,6 +195,50 @@ class mdplugin():
 
         elif not self.is_admin_or_whitelisted(player) and self.server.name == 'SMP': return
 
+        elif self.server.is_command(message, 'rb load-md'):
+            if not self.has_md_bkps():
+                self.server.send_response(player, 'x md-bkps no esta cargado.')
+                return
+
+            backup = message.removeprefix(f'{self.server.prefix}rb load-md').strip()
+            backups = self.get_md_bkps()
+
+            if not backup:
+                if not backups:
+                    self.server.send_response(player, 'No hay md-bkps disponibles.')
+                    return
+
+                self.server.send_response(player, 'Md-bkps disponibles:')
+
+                for backup_name in backups:
+                    backup_path = os.path.join(self.server.path_bkps, backup_name)
+                    creation_time = datetime.fromtimestamp(os.path.getctime(backup_path))
+
+                    dummy = [
+                        hover_and_suggest('[>] ' , color = 'green', suggest = f'!!rb load-md {backup_name}', hover = 'Load regions from md-bkp'),
+                        f'{{"text":"{backup_name} [{creation_time.strftime("%Y-%m-%d %H:%M:%S")}]"}}'
+                    ]
+
+                    self.server.execute(f'tellraw {player} {extras(dummy)}')
+                return
+
+            elif not self.has_regions_selected(player):
+                self.server.send_response(player, 'x No has agregado ninguna region.')
+                return
+
+            elif backup not in backups:
+                self.server.send_response(player, 'x No hay un md-bkp con ese nombre.')
+                return
+
+            self.scheduled_backup_md[player] = backup
+
+            dummy = extras(
+            [hover_and_suggest('!!rb confirm-md' , color= 'dark_gray', suggest = '!!rb confirm-md', hover = '!!rb confirm-md')],
+            text = f"Para confirmar la carga desde el md-bkp §d[{backup}]§7 utiliza "
+            )
+
+            self.server.execute(f'tellraw {player} {dummy}')
+
         elif self.server.is_command(message, 'rb load-bkp'):
             zip = message.removeprefix(f'{self.server.prefix}rb load-bkp').strip() + '.zip'
 
@@ -209,17 +259,49 @@ class mdplugin():
                 self.server.send_response(player, '✖ No has solicitado la carga de ningún backup.')
                 return
             
-            elif self.load_confirmed: 
+            elif self.load_confirmed or self.loading_bkp: 
                 self.server.send_response(player, '✖ Ya alguien más confirmo la carga de un backup.')
                 return
             
             self.load_confirmed = True
+            self.loading_bkp = True
 
             for i in range(5):
                 await asyncio.sleep(1)
                 self.server.send_response('@a', f'El servidor se reiniciará en {5-i} segundos.')
 
             await self.load_reg_bkp(player)
+
+        elif self.server.is_command(message, 'rb confirm-md'):
+            if not self.has_md_bkps():
+                self.server.send_response(player, 'x md-bkps no esta cargado.')
+                return
+
+            if not player in self.scheduled_backup_md.keys():
+                self.server.send_response(player, 'x No has solicitado la carga de ningun md-bkp.')
+                return
+
+            elif not self.has_regions_selected(player):
+                self.server.send_response(player, 'x No has agregado ninguna region.')
+                return
+
+            elif self.scheduled_backup_md[player] not in self.get_md_bkps():
+                self.server.send_response(player, 'x No hay un md-bkp con ese nombre.')
+                self.scheduled_backup_md.pop(player, None)
+                return
+
+            elif self.load_confirmed or self.loading_bkp:
+                self.server.send_response(player, 'x Ya alguien mas confirmo la carga de un backup.')
+                return
+
+            self.load_confirmed = True
+            self.loading_bkp = True
+
+            for i in range(5):
+                await asyncio.sleep(1)
+                self.server.send_response('@a', f'El servidor se reiniciara en {5-i} segundos.')
+
+            await self.load_md_partial_bkp(player)
 
         elif self.server.is_command(message, 'rb del-bkp'):
             zip_name = message.removeprefix(f'{self.server.prefix}rb del-bkp').strip()
@@ -316,7 +398,57 @@ class mdplugin():
 
         await discord_message.edit(content = f'```md\n[reg-bkps]: ✔ Reg-bkp {zip} unpacked.```')
 
+        self.scheduled_backup.pop(player, None)
+        self.load_confirmed = False
+        self.loading_bkp = False
         self.server.start()
+
+    async def   load_md_partial_bkp(self, player: str):
+        backup = self.scheduled_backup_md[player]
+
+        self.server.stop()
+
+        while self.server.is_running():
+            await asyncio.sleep(0.1)
+
+        discord_message = await self.server.send_to_console(f'[reg-bkps]: Loading regions from md-bkp {backup}...')
+        self.server.execute('tellraw @a {"text":"[reg-bkps]: Loading regions from md-bkp...", "color":"gray"}')
+
+        source = os.path.join(self.server.path_bkps, backup)
+        destination = os.path.join(self.server.path_files, 'server', 'world')
+        copied_files = 0
+
+        try:
+            for dim in self.files_to_zip[player].keys():
+                if dim == 'overworld':
+                    entities, region, poi = 'entities', 'region', 'poi'
+                elif dim == 'the_nether':
+                    entities, region, poi = os.path.join('DIM-1','entities'), os.path.join('DIM-1','region'), os.path.join('DIM-1','poi')
+                elif dim == 'the_end':
+                    entities, region, poi = os.path.join('DIM1','entities'), os.path.join('DIM1','region'), os.path.join('DIM1','poi')
+
+                for reg in self.files_to_zip[player][dim]:
+                    for folder in [region, poi, entities]:
+                        source_file = os.path.join(source, folder, reg)
+                        destination_file = os.path.join(destination, folder, reg)
+
+                        if not os.path.exists(source_file):
+                            continue
+
+                        os.makedirs(os.path.dirname(destination_file), exist_ok = True)
+                        shutil.copy2(source_file, destination_file)
+                        copied_files += 1
+
+            await discord_message.edit(content = f'```md\n[reg-bkps]: OK Loaded {copied_files} region files from md-bkp {backup}.```')
+            self.server.execute(f'tellraw @a {{"text":"[reg-bkps]: {copied_files} archivos copiados desde md-bkp.", "color":"gray"}}')
+        except Exception:
+            await discord_message.edit(content = f'```md\n[reg-bkps]: x Error loading regions from md-bkp {backup}.```')
+            raise
+        finally:
+            self.scheduled_backup_md.pop(player, None)
+            self.load_confirmed = False
+            self.loading_bkp = False
+            self.server.start()
 
     async def   make_reg_bkp(self, player:str, name:str):
         destination = os.path.join(self.reg_bkps_dir, f'{name}.zip')
@@ -442,6 +574,33 @@ class mdplugin():
 
     def         save_whitelist(self):
         write_in_file(self.whitelist_text_path, "\n".join(sorted(self.whitelisted_players)))
+
+    def         has_md_bkps(self):
+        if not hasattr(self.server, 'path_bkps') or not os.path.isdir(self.server.path_bkps):
+            return False
+
+        if hasattr(self.server, 'plugins'):
+            return any('md-bkps' in str(plugin) for plugin in self.server.plugins)
+
+        return True
+
+    def         get_md_bkps(self):
+        if not self.has_md_bkps():
+            return []
+
+        backups = [
+            x for x in os.listdir(self.server.path_bkps)
+            if os.path.isdir(os.path.join(self.server.path_bkps, x))
+        ]
+        backups.sort()
+        return backups
+
+    def         has_regions_selected(self, player: str):
+        return bool(
+            self.files_to_zip[player]['overworld']  +
+            self.files_to_zip[player]['the_nether'] +
+            self.files_to_zip[player]['the_end']
+        )
 
 
     def         show_list(self, player : str):
