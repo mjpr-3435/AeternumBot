@@ -4,7 +4,7 @@ import shutil
 import os
 
 from datetime import datetime
-from mcdis_rcon.utils import hover_and_suggest, extras, sct, hover
+from mcdis_rcon.utils import hover_and_suggest, extras, sct, hover, copy_dir
 from Classes.AeServer import AeServer
 
 class mdplugin():
@@ -14,6 +14,17 @@ class mdplugin():
         self.scheduled_load_backup  = {}
         self.action_confirmed       = False
         self.creating_backup        = False
+        self.last_auto_backup       = self.read_backup_datetime(self.get_auto_backup_path())
+
+        if hasattr(self, 'auto_task') and not self.auto_task.done():
+            self.auto_task.cancel()
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.get_event_loop()
+
+        self.auto_task = loop.create_task(self.auto_backup_loop())
 
     async def   on_player_command(self, player: str, message: str):
         backups = [x for x in os.listdir(self.server.path_bkps)]
@@ -101,6 +112,29 @@ class mdplugin():
         elif log.endswith('Saved the game') and self.waiting:
                 self.waiting = False
 
+    async def   auto_backup_loop(self):
+        try:
+            while True:
+                if self.last_auto_backup:
+                    elapsed = (datetime.now() - self.last_auto_backup).total_seconds()
+                    wait_time = max(0, 8*3600 - elapsed)
+                else:
+                    wait_time = 0
+
+                await asyncio.sleep(wait_time)
+
+                if self.creating_backup:
+                    await asyncio.sleep(60)
+                    continue
+
+                success = await self.make_auto_bkp()
+
+                if success:
+                    self.last_auto_backup = datetime.now()
+
+        except asyncio.CancelledError:
+            return
+
     async def   load_bkp (self, player: str):
         zip = self.scheduled_load_backup[player]
 
@@ -143,6 +177,92 @@ class mdplugin():
         await discord_message.edit(content = msg)
 
         self.server.start()
+
+    async def   make_auto_bkp(self):
+        if self.creating_backup:
+            return False
+
+        self.creating_backup = True
+
+        auto_path = self.get_auto_backup_path()
+        log_path = os.path.join(self.server.path_files, 'backup_log.txt')
+        discord_message = await self.server.send_to_console('[md-bkps]: Creating automatic backup...')
+        counter = [0,0]
+        reports = {'error': False}
+
+        self.waiting = True
+
+        self.server.execute('save-off')
+        self.server.execute('save-all')
+
+        try:
+            while self.waiting:
+                await asyncio.sleep(1)
+
+            self.server.execute(f'tellraw @a {{"text":"[md-bkps]: Creando backup automatico...", "color": "gray"}}')
+
+            def _auto_backup_job():
+                if os.path.exists(auto_path):
+                    shutil.rmtree(auto_path)
+
+                log_content = (
+                    f'Backup created on: '
+                    f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}\n'
+                )
+
+                with open(log_path, 'w') as log_file:
+                    log_file.write(log_content)
+
+                try:
+                    copy_dir(self.server.path_files, auto_path, counter)
+
+                    auto_log_path = os.path.join(auto_path, 'backup_log.txt')
+                    with open(auto_log_path, 'a', encoding='utf-8') as log_file:
+                        log_file.write('Backup created by: auto\n')
+                        log_file.write('Comment: auto\n')
+                finally:
+                    if os.path.exists(log_path):
+                        os.remove(log_path)
+
+            auto_bkp = self.server.client.error_wrapper(
+                error_title = f'{self.server.name}: make_auto_bkp()',
+                reports = reports
+                )(_auto_backup_job)
+
+            task = threading.Thread(target = auto_bkp)
+            task.start()
+
+            while task.is_alive():
+                if counter[1] == 0:
+                    await asyncio.sleep(0.1)
+                else:
+                    show = '```md\n[md-bkps]: [{}/{}] files have been copying in auto backup...\n```'\
+                        .format(counter[0], counter[1])
+
+                    percent = counter[0]*100/counter[1]
+                    self.server.execute(f'tellraw @a {{"text":"[md-bkps]: {sct["c:white"]}{percent:6.2f}{sct["c:gold"]}%{sct["f:reset"]} archivos copiados en backup automatico...", "color": "gray"}}')
+
+                    await discord_message.edit(content = show)
+                    await asyncio.sleep(1)
+
+            if reports['error']:
+                msg = '```md\n[md-bkps]: Error while creating automatic backup.\n```'
+                self.server.execute(f'tellraw @a {{"text":"[md-bkps]: Ocurrio un error mientras se creaba el backup automatico.", "color": "gray"}}')
+                await discord_message.edit(content = msg)
+                return False
+
+            msg = '```md\n[md-bkps]: Automatic backup updated successfully.\n```'
+            self.server.execute(f'tellraw @a {{"text":"[md-bkps]: El backup automatico se creo exitosamente.", "color": "gray"}}')
+            await discord_message.edit(content = msg)
+            return True
+
+        finally:
+            self.server.execute('save-on')
+            self.creating_backup = False
+            self.waiting = False
+
+            if os.path.exists(log_path):
+                os.remove(log_path)
     
     async def make_bkp(self, player, comment = None):
         self.creating_backup = True
@@ -168,10 +288,7 @@ class mdplugin():
             )(self.server.make_bkp)
 
         limit = self.server.client.config['Backups']
-        all_backups = [
-            x for x in os.listdir(self.server.path_bkps)
-            if os.path.isdir(os.path.join(self.server.path_bkps, x))
-        ]
+        all_backups = self.get_manual_backups()
 
         if len(all_backups) >= limit:
             metadata = []
@@ -241,7 +358,7 @@ class mdplugin():
             self.server.execute(f'tellraw @a {{"text":"[md-bkps]: Ocurrio un error mientras se copiaban los archivos.", "color": "gray"}}')
         else:
             backups = sorted(
-                os.listdir(self.server.path_bkps),
+                self.get_manual_backups(),
                 key=lambda x: os.path.getmtime(os.path.join(self.server.path_bkps, x))
             )
             last_backup = backups[-1]
@@ -258,6 +375,63 @@ class mdplugin():
 
         await discord_message.edit(content = msg)
         self.creating_backup = False
+
+    def         unload(self):
+        if hasattr(self, 'auto_task'):
+            self.auto_task.cancel()
+
+    def         get_auto_backup_path(self):
+        limit = self.server.client.config['Backups']
+        auto_index = limit + 1
+
+        return os.path.join(
+            self.server.path_bkps,
+            f"{self.server.name} {auto_index}"
+        )
+
+    def         read_backup_datetime(self, backup_path: str):
+        log_file = os.path.join(backup_path, 'backup_log.txt')
+
+        if not os.path.exists(log_file):
+            return None
+
+        with open(log_file, 'r', encoding='utf-8') as log:
+            for line in log:
+                if not line.startswith('Backup created on:'):
+                    continue
+
+                try:
+                    return datetime.strptime(
+                        line.replace('Backup created on:', '').strip(),
+                        '%Y-%m-%d %H:%M:%S'
+                    )
+                except ValueError:
+                    return None
+
+        return None
+
+    def         get_manual_backups(self):
+        limit = self.server.client.config['Backups']
+        prefix = f'{self.server.name} '
+        backups = []
+
+        for backup in os.listdir(self.server.path_bkps):
+            backup_path = os.path.join(self.server.path_bkps, backup)
+            if not os.path.isdir(backup_path):
+                continue
+
+            if not backup.startswith(prefix):
+                continue
+
+            suffix = backup.removeprefix(prefix)
+            if not suffix.isdigit():
+                continue
+
+            index = int(suffix)
+            if 1 <= index <= limit:
+                backups.append(backup)
+
+        return backups
         
     def         show_bkps(self, player : str):
         backups = [x for x in os.listdir(self.server.path_bkps)]
