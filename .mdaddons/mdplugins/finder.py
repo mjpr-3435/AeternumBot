@@ -1781,7 +1781,7 @@ class mdplugin():
                 pz = z1 + (dz * t)
                 self.server.execute(
                     f'execute in minecraft:{dim} run '
-                    f'particle minecraft:end_rod {px:.2f} {py:.2f} {pz:.2f} 0 0 0 0 1 force {player}'
+                    f'particle minecraft:end_rod {px:.2f} {py:.2f} {pz:.2f} 0 0 0 0 1 force @a' #{player}
                 )
 
         t_end = duration
@@ -1948,7 +1948,7 @@ class mdplugin():
                             if total_entries and (now - last_progress_at >= 2.0 or processed_entries == total_entries):
                                 percent = (processed_entries / total_entries) * 100
                                 self.server.send_response(
-                                    player,
+                                    '@a', # player
                                     f"§8[Finder] Progreso caché: §f{processed_entries}/{total_entries} §8({percent:.1f}%)"
                                 )
                                 last_progress_at = now
