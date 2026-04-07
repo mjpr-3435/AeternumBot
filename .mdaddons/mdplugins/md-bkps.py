@@ -117,7 +117,7 @@ class mdplugin():
             while True:
                 if self.last_auto_backup:
                     elapsed = (datetime.now() - self.last_auto_backup).total_seconds()
-                    wait_time = max(0, 8*3600 - elapsed)
+                    wait_time = max(0, 24*3600 - elapsed)
                 else:
                     wait_time = 0
 

@@ -2,6 +2,8 @@ from mcdis_rcon.utils import mc_uuid
 from .Modules import *
 from .Embeds import *
 
+INTERVIEWER_ID = 889357182297071636
+
 class banner_views(discord.ui.View):
     def __init__(self):
         super().__init__(timeout = None)
@@ -17,9 +19,11 @@ class banner_views(discord.ui.View):
     @discord.ui.button(label = 'Whitelist',
                        style = discord.ButtonStyle.gray)
     async def whitelist_button(self, interaction:discord.Interaction, button: discord.ui.Button):
+        has_interviewer_role = INTERVIEWER_ID in [role.id for role in interaction.user.roles]
+
         await interaction.response.send_message(
             embed=whitelist_embed(),
-            view=WhitelistListView(is_admin_request=isAdmin(interaction.user)),
+            view=WhitelistListView(is_admin_request=isAdmin(interaction.user) or has_interviewer_role),
             ephemeral=True
         )
 
@@ -274,8 +278,7 @@ class WhitelistActionSelect(discord.ui.Select):
         self.view : WhitelistListView
 
     async def callback(self, interaction: discord.Interaction):
-        interviewer_id = 914530780523401267
-        has_interviewer_role = interviewer_id in [role.id for role in interaction.user.roles]
+        has_interviewer_role = INTERVIEWER_ID in [role.id for role in interaction.user.roles]
         is_admin = isAdmin(interaction.user)
         action = self.values[0]
 
