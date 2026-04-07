@@ -2,9 +2,16 @@ from ..Modules import *
 
 def form_info_request       (form_id:int, request: list) -> tuple:
     df = pd.read_csv(form_log, index_col = 'index')
+    if 'lang' not in df.columns:
+        df['lang'] = 'es'
     ticket = df.loc[df['form_id'] == form_id]
+    if ticket.empty:
+        return None if len(request) == 1 else tuple(None for _ in request)
     info = []
     for arg in request:
+        if arg not in ticket.columns:
+            info.append(None)
+            continue
         info.append(ticket[arg].values[0])
     
     if len(request) == 1:
@@ -14,6 +21,8 @@ def form_info_request       (form_id:int, request: list) -> tuple:
 
 def form_info_update        (form_id:int, new_values: dict):
     df = pd.read_csv(form_log, index_col = 'index')
+    if 'lang' not in df.columns:
+        df['lang'] = 'es'
     for key, value in new_values.items():
         df.loc[df['form_id'] == form_id, key] = value
     df.to_csv(form_log)
