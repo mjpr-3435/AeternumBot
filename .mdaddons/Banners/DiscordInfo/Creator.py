@@ -5,7 +5,7 @@ from .Modules import *
 async def discord_creator(client: McDisClient, *, loop: bool = False):
     channel = client.get_channel(config['Channel ID'])
     # await extras_creator(client)
-    await showcase_creator(client)
+    # await showcase_creator(client)
     # await patreon_creator(client)
     # await aecademy_creator(client)
 
@@ -56,7 +56,6 @@ async def extras_creator(client: McDisClient):
         await messages[1].edit(embed = members_embed())  
         await messages[2].edit(embed = autoroles_embed(), view = autoroles_views(guild))
 
-
 async def patreon_creator(client: McDisClient):
     channel = client.get_channel(1426128088760324116)
     messages =  [msg async for msg in channel.history(limit = None, oldest_first = True)]
@@ -77,7 +76,6 @@ async def aecademy_creator(client: McDisClient):
 
     elif len(messages) == 1 and all([message.author.id == client.user.id for message in messages]):
         await messages[0].edit(embeds = aecademy_embed(), view = AecademyInfoView())
-
 
 async def showcase_creator(client: McDisClient):
     channel = client.get_channel(config['Showcase ID'])

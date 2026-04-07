@@ -64,6 +64,10 @@ class mdaddon():
         task = asyncio.create_task(discord_creator  (self.client))
         self.persistent_tasks.append(task)
 
+        from Banners.HoneyPot.Creator import honey_pot_creator, honey_pot_extras
+        asyncio.create_task(honey_pot_extras        (self.client))
+        asyncio.create_task(honey_pot_creator       (self.client))
+
         ### Status ###
 
         await self.client.change_presence(

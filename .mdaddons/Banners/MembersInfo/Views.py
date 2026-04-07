@@ -174,13 +174,11 @@ class WhitelistListView(discord.ui.View):
 
         self._refresh_pagination()
         self.add_item(UpdateButton())
-        self.add_item(PreviousPageButton())
-        self.add_item(NextPageButton())
-        self.add_item(AddButton())
-        self.add_item(RemoveButton())
         if self.is_admin_request:
             self.add_item(InactivesToggleButton())
-            self.add_item(PurgeInactivesButton())
+            self.add_item(WhitelistActionSelect())
+        self.add_item(PreviousPageButton())
+        self.add_item(NextPageButton())
 
     def _refresh_pagination(self):
         self.len = len(_get_whitelist_dataframe(self.only_inactives))
@@ -211,38 +209,35 @@ class WhitelistListView(discord.ui.View):
             view = self
         )
 
-class UpdateButton          (discord.ui.Button):
-
+class UpdateButton(discord.ui.Button):
     def __init__(self):
-        super().__init__(label='🔄', style=discord.ButtonStyle.gray)
+        super().__init__(label='🔄', style=discord.ButtonStyle.gray, row=1)
         self.view : WhitelistListView
 
     async def callback(self, interaction: discord.Interaction):
         await self.view._update_page(interaction)
 
-class PreviousPageButton    (discord.ui.Button):
+class PreviousPageButton(discord.ui.Button):
     def __init__(self):
-        super().__init__(label = '<', style = discord.ButtonStyle.gray)
+        super().__init__(label = '<', style = discord.ButtonStyle.gray, row=1)
         self.view : WhitelistListView
 
     async def callback(self, interaction: discord.Interaction):
         self.view.page = self.view.page - 1 if self.view.page > 1 else 1
-
         await self.view._update_page(interaction)
         
-class NextPageButton        (discord.ui.Button):
+class NextPageButton(discord.ui.Button):
     def __init__(self):
-        super().__init__(label = '>', style = discord.ButtonStyle.gray)
+        super().__init__(label = '>', style = discord.ButtonStyle.gray, row=1)
         self.view : WhitelistListView
 
     async def callback(self, interaction: discord.Interaction):
         self.view.page = self.view.page + 1 if self.view.page < self.view.max_page else self.view.max_page
-
         await self.view._update_page(interaction)
 
 class InactivesToggleButton(discord.ui.Button):
     def __init__(self):
-        super().__init__(label='All', style=discord.ButtonStyle.green)
+        super().__init__(label='All', style=discord.ButtonStyle.green, row=1)
         self.view : WhitelistListView
 
     async def callback(self, interaction: discord.Interaction):
@@ -256,45 +251,47 @@ class InactivesToggleButton(discord.ui.Button):
         self.style = discord.ButtonStyle.gray if self.view.only_inactives else discord.ButtonStyle.green
         await self.view._update_interface(interaction)
 
-class PurgeInactivesButton(discord.ui.Button):
+class WhitelistActionSelect(discord.ui.Select):
     def __init__(self):
-        super().__init__(label='Purge', style=discord.ButtonStyle.red)
-        self.view : WhitelistListView
-
-    async def callback(self, interaction: discord.Interaction):
-        if not isAdmin(interaction.user):
-            await interaction.response.send_message('✖ No tienes permisos.', ephemeral=True, delete_after=1)
-            return
-
-        await interaction.response.send_modal(PurgeInactivesModal(self.view))
-
-class AddButton(discord.ui.Button):
-    def __init__(self):
-        super().__init__(label = 'Add', style=discord.ButtonStyle.blurple)
-        self.view : WhitelistListView
-
-    async def callback(self, interaction: discord.Interaction):
-        interviewer_id = 914530780523401267
-
-        if not isAdmin(interaction.user) and not interviewer_id in [role.id for role in interaction.user.roles]:
-            await interaction.response.send_message('✖ No tienes permisos.', ephemeral = True, delete_after = 1)
-            return
-        
-        await interaction.response.send_modal(AddNicknameModal())
-
-class RemoveButton(discord.ui.Button):
-    def __init__(self):
-        super().__init__(label = 'Remove', style=discord.ButtonStyle.red)
+        options = [
+            discord.SelectOption(label='Agregar', value='add', description='Añadir un usuario a la whitelist'),
+            discord.SelectOption(label='Remover', value='remove', description='Eliminar un usuario de la whitelist'),
+            discord.SelectOption(label='Purgar', value='purge', description='Eliminar inactivos de la whitelist'),
+        ]
+        super().__init__(
+            placeholder='Acciones de whitelist',
+            min_values=1,
+            max_values=1,
+            options=options,
+            row=0
+        )
         self.view : WhitelistListView
 
     async def callback(self, interaction: discord.Interaction):
         interviewer_id = 914530780523401267
+        has_interviewer_role = interviewer_id in [role.id for role in interaction.user.roles]
+        is_admin = isAdmin(interaction.user)
+        action = self.values[0]
 
-        if not isAdmin(interaction.user) and not interviewer_id in [role.id for role in interaction.user.roles]:
-            await interaction.response.send_message('✖ No tienes permisos.', ephemeral = True, delete_after = 1)
+        if action == 'add':
+            if not is_admin and not has_interviewer_role:
+                await interaction.response.send_message('✖ No tienes permisos.', ephemeral = True, delete_after = 1)
+                return
+            await interaction.response.send_modal(AddNicknameModal())
             return
-        
-        await interaction.response.send_modal(RemoveNicknameModal())
+
+        if action == 'remove':
+            if not is_admin and not has_interviewer_role:
+                await interaction.response.send_message('✖ No tienes permisos.', ephemeral = True, delete_after = 1)
+                return
+            await interaction.response.send_modal(RemoveNicknameModal())
+            return
+
+        if action == 'purge':
+            if not is_admin:
+                await interaction.response.send_message('✖ No tienes permisos.', ephemeral=True, delete_after=1)
+                return
+            await interaction.response.send_modal(PurgeInactivesModal(self.view))
 
 class PurgeInactivesModal(discord.ui.Modal, title="Purge Inactives"):
     confirmation = discord.ui.TextInput(
