@@ -9,20 +9,10 @@ class mdplugin():
 
     async def on_player_command(self, player: str, message: str):
 
-        if self.server.is_command(message, 'online'):
-            msgs = []
-            for server in self.server.client.servers:
-                
-                players = ", ".join(server.online_players + server.bots)
-                msgs.append(hover(f'[{server.name}] ', color = 'gray', hover = players))
-
-            self.server.execute(f'tellraw {player} {extras(msgs, text = "Jugadores: ")}')
-        
         if self.server.is_command(message, 'mdhelp'):
             self.server.show_command(player, f"pm help", "Muestra los comandos del processes manager.")
 
         elif self.server.is_command(message, 'pm help'):
-            self.server.show_command(player, f"online", "Muestra los jugadores en los servidores.")
             self.server.show_command(player, f"status", "Muestra el estado de los procesos.")
             self.server.show_command(player, f"start <process>", "Abrir el proceso.")
             

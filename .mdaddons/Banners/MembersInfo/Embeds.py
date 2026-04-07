@@ -1,4 +1,5 @@
 from .Modules import *
+import os
 
 def apoyo_embed() -> list[discord.Embed]:
     embeds = [
@@ -92,3 +93,32 @@ def decoraciones_embed() -> list[discord.Embed]:
                 f'')]
     
     return embeds
+
+
+def twitch_embed() -> tuple[discord.Embed, list[discord.File]]:
+    profiles_path = os.path.join(os.path.dirname(__file__), 'TwitchProfiles.png')
+    thumb_path = os.path.join(os.path.dirname(__file__), 'TwitchBannerThumb.png')
+
+    embed = discord.Embed(
+        colour=0x6441A5,
+        description=
+            "> **Aeternum Twitch**\n"
+            "https://www.twitch.tv/aeternumsmp\n\n"
+            "> **Clave para stremear (poner en OBS)**\n"
+            "||live_731189279_9YLQiLsakCJ6sRUTwRZOgrEWmZwyrL||\n\n"
+            "> **Cinemática de Intro de Aeternum**\n"
+            "https://drive.google.com/file/d/1ahOKFwtLJw5OiobmOkIV9Cv28GCwBWW9/view?usp=drive_link\n\n"
+            "> **Overlay de la Música**\n"
+            "https://6klabs.com/\n"
+            "Sirve para YT Music (con el software Youtube Music Desktop App) y Spotify\n\n"
+            "> **Página para generar tu imagen de este estilo**\n"
+            "https://minecraftpfp.com/"
+    )
+    embed.set_image(url="attachment://TwitchProfiles.png")
+    embed.set_thumbnail(url="attachment://TwitchBannerThumb.png")
+
+    files = [
+        discord.File(profiles_path, filename='TwitchProfiles.png'),
+        discord.File(thumb_path, filename='TwitchBannerThumb.png'),
+    ]
+    return embed, files

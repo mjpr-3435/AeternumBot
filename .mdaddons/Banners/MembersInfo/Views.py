@@ -28,6 +28,12 @@ class banner_views(discord.ui.View):
     async def apoyo_button(self, interaction:discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message(embeds = apoyo_embed(), ephemeral = True)
 
+    @discord.ui.button(label = 'Twitch',
+                       style = discord.ButtonStyle.gray)
+    async def twitch_button(self, interaction:discord.Interaction, button: discord.ui.Button):
+        embed, files = twitch_embed()
+        await interaction.response.send_message(embed = embed, files = files, ephemeral = True)
+
 class AddNicknameModal(discord.ui.Modal, title = "Agregar a la Whitelist"):
     nickname = discord.ui.TextInput(
         label="Nickname (Considera mayúsculas y minúsculas)",

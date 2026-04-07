@@ -66,36 +66,40 @@ class mdplugin():
         days = int((datetime.today()-datetime.strptime(self.foundation_date, "%Y-%m-%d")).days%365.25)
                 
         if years == 0:
-            active_days = f'Tiempo activo: {days} días'
+            active_days = f'Tiempo activo: {days} d?as'
         elif days == 0:
-            active_days = f'Tiempo activo: {years} años'
+            active_days = f'Tiempo activo: {years} a?os'
         else:
-            active_days = f'Tiempo activo: {years} años {days} días'
+            active_days = f'Tiempo activo: {years} a?os {days} d?as'
+
+        server_buttons = []
+        for server_name in ["SMP", "CMP", "MMP", "PMP"]:
+            target_server = next((server for server in self.server.client.servers if server.name == server_name), None)
+            online_players = target_server.online_players + target_server.bots if target_server else []
+            hover_text = ", ".join(online_players) if online_players else "Sin jugadores conectados."
+            server_buttons.append(
+                hover_and_run(
+                    f'?l[{server_name}] ',
+                    color = 'white',
+                    command = f'/server {server_name}',
+                    hover = hover_text
+                )
+            )
         
-        join_messages = [   '{"text" : "§f§lAeternum §9§lNetwork"}',
+        join_messages = [   '{"text" : "?f?lAeternum ?9?lNetwork"}',
                             '{"text" : "--------------------------"}',
-
-                            extras([hover_and_run('§l[SMP] ', color = 'white', command = '/server SMP', hover = '/server SMP'),
-                                    hover_and_run('§l[CMP] ', color = 'white', command = '/server CMP', hover = '/server CMP'),
-                                    hover_and_run('§l[MMP] ', color = 'white', command = '/server MMP', hover = '/server MMP')], 
-                                    text= 'Servers: ', color = 'white')\
-                            if self.server.name in ["SMP", "CMP", "MMP"] else \
-                            extras([hover_and_run('§l[PMP] ', color = 'white', command = '', hover = '')], 
-                                    text= 'Servers: ', color = 'white'),
-
+                            extras(server_buttons, text= 'Servers: ', color = 'white'),
                             f'{{"text" : "{active_days}"}}',
-
                             '{"text" : "--------------------------"}',
-
                             f'{{"text" : "MCDIS: !!mdhelp       MCDR: !!help", "color" : "gray"}}']
         
         extra_messages = self.get_motd()
         
         if extra_messages:
-            join_messages.append('{"text" : "--------------------------"}'),
+            join_messages.append('{"text" : "--------------------------"}')
             
             for i in range(len(extra_messages)):
-                join_messages.append(f'{{"text" : "§8[{i + 1 }] §r{extra_messages[i]}"}}')
+                join_messages.append(f'{{"text" : "?8[{i + 1 }] ?r{extra_messages[i]}"}}')
 
         return join_messages
 

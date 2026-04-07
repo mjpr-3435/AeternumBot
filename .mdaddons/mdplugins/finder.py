@@ -85,6 +85,7 @@ class mdplugin():
 
             if not player in self.server.admins: return
             self.server.show_command(player, 'find <item>', 'Busca <item> en MainStorage.')
+            self.server.show_command(player, 'count <item>', 'Cuenta cuántos <item> hay en MainStorage usando caché.')
             self.server.show_command(player, 'fd help', 'Muestra los comandos del finder')
 
         elif self.server.is_command(message, 'fd help'):
@@ -130,6 +131,21 @@ class mdplugin():
                 return
 
             await self._search_on_place(player, default_place, item_id, force_cache_refresh=force_cache_refresh)
+            return
+
+        elif self.server.is_command(message, 'count'):
+            raw_query = message.removeprefix(f'{self.server.prefix}count').strip()
+            if not raw_query:
+                self.server.send_response(player, "§c✖§f Uso: count <item>")
+                return
+
+            default_place = self.initial_default_place
+            item_id = self._resolve_find_item_id(raw_query)
+            if not item_id:
+                self.server.send_response(player, f"§c✖§f Ítem no válido: §e{raw_query}")
+                return
+
+            self._count_item_on_cache(player, default_place, item_id)
             return
 
         elif not player in self.server.admins:
@@ -1680,6 +1696,80 @@ class mdplugin():
             rows.append((dim, x, y, z, block_type))
 
         return rows
+
+    def         _count_item_mentions_in_nbt(self, nbt_text: str, item_id: str) -> tuple[int, int]:
+        if not nbt_text or nbt_text == "[]":
+            return 0, 0
+
+        item_id = item_id.lower()
+        total_count = 0
+        stack_matches = 0
+
+        patterns = [
+            re.compile(
+                rf'count:\s*(\d+)[a-z]?\s*,[^{{}}\\[\\]]*id:\s*"{re.escape(item_id)}"',
+                re.IGNORECASE
+            ),
+            re.compile(
+                rf'id:\s*"{re.escape(item_id)}"\s*,[^{{}}\\[\\]]*count:\s*(\d+)[a-z]?',
+                re.IGNORECASE
+            ),
+        ]
+
+        seen_spans = []
+        for pattern in patterns:
+            for match in pattern.finditer(nbt_text):
+                span = match.span()
+                if any(not (span[1] <= prev[0] or span[0] >= prev[1]) for prev in seen_spans):
+                    continue
+                seen_spans.append(span)
+                try:
+                    total_count += int(match.group(1))
+                    stack_matches += 1
+                except Exception:
+                    continue
+
+        return total_count, stack_matches
+
+    def         _count_item_on_cache(self, player: str, place_name: str, item_id: str):
+        cache_entry = self.find_region_cache.get(place_name)
+        if not cache_entry:
+            self.server.send_response(
+                player,
+                f"§c✖§f No hay caché cargada para §e{place_name}§f. Usa §ffd scan {place_name}§f o §ffind <item>§f primero."
+            )
+            return
+
+        inventories = cache_entry.get('inventories', [])
+        total_items = 0
+        total_stacks = 0
+        container_hits = 0
+
+        for (_, x, y, z, data_lc) in inventories:
+            count_in_container, stacks_in_container = self._count_item_mentions_in_nbt(str(data_lc or ""), item_id)
+            if count_in_container <= 0:
+                continue
+            total_items += count_in_container
+            total_stacks += stacks_in_container
+            container_hits += 1
+
+        if total_items <= 0:
+            self.server.send_response(
+                player,
+                f"§7En §b{place_name}§7 no hay §f{item_id}§7 en la caché actual."
+            )
+            return
+
+        shulkers_approx = max(0, total_stacks - container_hits)
+        self.server.send_response(
+            player,
+            f"§b{item_id}§7 en §b{place_name}§7 → §e{total_items}§7 items | §e{total_stacks}§7 stacks | §e{container_hits}§7 contenedores"
+        )
+        if shulkers_approx > 0:
+            self.server.send_response(
+                player,
+                f"§8[Finder] Incluye contenido anidado en shulkers/cajas detectado en la caché. Stacks internos aprox.: §f{shulkers_approx}"
+            )
 
     def         _place_exists(self, name: str):
         filepath = os.path.join(self.reg_bkps_dir, f"{name}.csv")
