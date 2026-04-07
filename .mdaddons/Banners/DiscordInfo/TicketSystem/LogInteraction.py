@@ -14,7 +14,8 @@ def new_log                 (ticket_banner: discord.Message, interaction: discor
                                'ticket_channel_id': ticket_banner.channel.id,
                                'ticket_banner_id': ticket_banner.id,
                                'owner_id': interaction.user.id,
-                               'ticket_number': df.shape[0] + 1}, index = [df.shape[0]])
+                               'ticket_number': df.shape[0] + 1,
+                               'lang': 'es'}, index = [df.shape[0]])
     
     if df.shape[0] == 0:
         new_ticket.rename_axis('index').to_csv(tickets_log)
@@ -35,9 +36,16 @@ def ticket_id_from_user        (user: discord.user) -> int:
 
 def ticket_info_request     (ticket_channel_id: int, request: list) -> tuple:
     df = pd.read_csv(tickets_log, index_col = 'index')
+    if 'lang' not in df.columns:
+        df['lang'] = 'es'
     ticket = df.loc[df['ticket_channel_id'] == ticket_channel_id]
+    if ticket.empty:
+        return None if len(request) == 1 else tuple(None for _ in request)
     info = []
     for arg in request:
+        if arg not in ticket.columns:
+            info.append(None)
+            continue
         info.append(ticket[arg].values[0])
     
     if len(request) == 1:
@@ -47,12 +55,16 @@ def ticket_info_request     (ticket_channel_id: int, request: list) -> tuple:
 
 def ticket_info_update      (ticket_channel_id: int, new_values: dict):
     df = pd.read_csv(tickets_log, index_col = 'index')
+    if 'lang' not in df.columns:
+        df['lang'] = 'es'
     for key, value in new_values.items():
         df.loc[df['ticket_channel_id'] == ticket_channel_id, key] = value
     df.to_csv(tickets_log)
     
 async def update_log        (client: commands.Bot):
     df = pd.read_csv(tickets_log, index_col = 'index')
+    if 'lang' not in df.columns:
+        df['lang'] = 'es'
     tickets_id = df.loc[(df['state'] == 'active')]['ticket_channel_id'].values
 
     for ticket_id in tickets_id:

@@ -35,7 +35,7 @@ class banner_en_views(discord.ui.View):
             await response.delete(delay = 60)
             return
         
-        ticket, created_ticket = await ticket_creation(interaction)
+        ticket, created_ticket = await ticket_creation(interaction, lang='en')
 
         if not created_ticket:
             response = await interaction.followup.send(f'✖ You already have an open ticket. <#{ticket.id}>')
@@ -84,7 +84,7 @@ class banner_es_views(discord.ui.View):
             await response.delete(delay = 60)
             return
 
-        ticket, created_ticket = await ticket_creation(interaction)
+        ticket, created_ticket = await ticket_creation(interaction, lang='es')
 
         if not created_ticket:
             response = await interaction.followup.send(f'✖ Ya tienes un ticket abierto. <#{ticket.id}>')
