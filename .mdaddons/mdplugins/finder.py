@@ -85,7 +85,7 @@ class mdplugin():
 
             if not player in self.server.admins: return
             self.server.show_command(player, 'find <item>', 'Busca <item> en MainStorage.')
-            self.server.show_command(player, 'count <item>', 'Cuenta cuántos <item> hay en MainStorage usando caché.')
+            self.server.show_command(player, 'count <item>', 'Cuenta cuántos <item> hay en MainStorage.')
             self.server.show_command(player, 'fd help', 'Muestra los comandos del finder')
 
         elif self.server.is_command(message, 'fd help'):
@@ -140,12 +140,19 @@ class mdplugin():
                 return
 
             default_place = self.initial_default_place
+            if not self._place_exists(default_place):
+                self.server.send_response(
+                    player,
+                    f"§c✖§f El lugar por defecto no existe: §e{default_place}§f. Usa §ffd scan {default_place}"
+                )
+                return
+
             item_id = self._resolve_find_item_id(raw_query)
             if not item_id:
                 self.server.send_response(player, f"§c✖§f Ítem no válido: §e{raw_query}")
                 return
 
-            self._count_item_on_cache(player, default_place, item_id)
+            await self._count_item_on_cache(player, default_place, item_id)
             return
 
         elif not player in self.server.admins:
@@ -1731,16 +1738,34 @@ class mdplugin():
 
         return total_count, stack_matches
 
-    def         _count_item_on_cache(self, player: str, place_name: str, item_id: str):
-        cache_entry = self.find_region_cache.get(place_name)
-        if not cache_entry:
-            self.server.send_response(
-                player,
-                f"§c✖§f No hay caché cargada para §e{place_name}§f. Usa §ffd scan {place_name}§f o §ffind <item>§f primero."
-            )
+    async def   _count_item_on_cache(self, player: str, place_name: str, item_id: str):
+        rows = self._load_place_csv(place_name)
+        if rows is None:
+            self.server.send_response(player, f"§c✖§f No existe el lugar: §e{place_name}")
             return
 
-        inventories = cache_entry.get('inventories', [])
+        by_chunk = {}
+        for (dim, x, y, z, block_type) in rows:
+            chunk_x = x // 16
+            chunk_z = z // 16
+            key = (dim, chunk_x, chunk_z)
+            if key not in by_chunk:
+                by_chunk[key] = []
+            by_chunk[key].append((x, y, z, block_type))
+
+        cache_path = os.path.join(self.reg_bkps_dir, f"{place_name}.csv")
+        csv_mtime = os.path.getmtime(cache_path) if os.path.exists(cache_path) else None
+        inventories = await self._get_or_build_place_cache(
+            player,
+            place_name,
+            rows,
+            by_chunk,
+            csv_mtime,
+            force_cache_refresh=False
+        )
+        if inventories is None:
+            return
+
         total_items = 0
         total_stacks = 0
         container_hits = 0
@@ -1760,16 +1785,10 @@ class mdplugin():
             )
             return
 
-        shulkers_approx = max(0, total_stacks - container_hits)
         self.server.send_response(
             player,
-            f"§b{item_id}§7 en §b{place_name}§7 → §e{total_items}§7 items | §e{total_stacks}§7 stacks | §e{container_hits}§7 contenedores"
+            f"§b{item_id}§7 en §b{place_name}§7 → §e{total_items}§7 items | §e{total_stacks}§7 stacks"
         )
-        if shulkers_approx > 0:
-            self.server.send_response(
-                player,
-                f"§8[Finder] Incluye contenido anidado en shulkers/cajas detectado en la caché. Stacks internos aprox.: §f{shulkers_approx}"
-            )
 
     def         _place_exists(self, name: str):
         filepath = os.path.join(self.reg_bkps_dir, f"{name}.csv")
@@ -1994,108 +2013,16 @@ class mdplugin():
 
         cache_path = os.path.join(self.reg_bkps_dir, f"{name}.csv")
         csv_mtime = os.path.getmtime(cache_path) if os.path.exists(cache_path) else None
-        now_ts = time.time()
-        cache_entry = self.find_region_cache.get(name)
-        use_region_cache = (
-            (not force_cache_refresh) and
-            cache_entry is not None and
-            (now_ts - cache_entry.get('scanned_at', 0)) <= self.find_cache_ttl_seconds and
-            cache_entry.get('csv_mtime') == csv_mtime and
-            cache_entry.get('rows_count') == len(rows)
+        inventories_snapshot = await self._get_or_build_place_cache(
+            player,
+            name,
+            rows,
+            by_chunk,
+            csv_mtime,
+            force_cache_refresh=force_cache_refresh
         )
-
-        inventories_snapshot = []
-        if use_region_cache:
-            inventories_snapshot = list(cache_entry.get('inventories', []))
-            self.server.send_response(player, "§8[Finder] Usando caché.")
-        else:
-            if force_cache_refresh:
-                self.server.send_response(player, "§8[Finder] Forzando recreación de caché...")
-            loaded_chunks_by_dim = set()
-            read_errors = 0
-            processed_entries = 0
-            last_progress_at = time.perf_counter()
-
-            self.server.send_response(player, "§8[Finder] Creando caché de la región...")
-
-            try:
-                for (dim, chunk_x, chunk_z) in by_chunk.keys():
-                    loaded_chunks_by_dim.add((dim, chunk_x, chunk_z))
-                    self.server.execute(
-                        f'execute in minecraft:{dim} run forceload add {chunk_x * 16} {chunk_z * 16}'
-                    )
-                await asyncio.sleep(1)
-
-                for (dim, _, _), blocks in by_chunk.items():
-                    for (x, y, z, block_type) in blocks:
-                        # asyncio.create_task(self._flash_find_analysis_location(dim, x, y, z, duration=2.0))
-                        try:
-                            data = await self._get_block_data_with_retries(x, y, z, dim, path="Items")
-                        except Exception:
-                            read_errors += 1
-                            processed_entries += 1
-                            now = time.perf_counter()
-                            if total_entries and (now - last_progress_at >= 2.0 or processed_entries == total_entries):
-                                percent = (processed_entries / total_entries) * 100
-                                self.server.send_response(
-                                    '@a', # player
-                                    f"§8[Finder] Progreso caché: §f{processed_entries}/{total_entries} §8({percent:.1f}%)"
-                                )
-                                last_progress_at = now
-                            continue
-
-                        if not data or data == 'NOT_BLOCK_ENTITY':
-                            inventories_snapshot.append((dim, x, y, z, ""))
-                            processed_entries += 1
-                            now = time.perf_counter()
-                            if total_entries and (now - last_progress_at >= 2.0 or processed_entries == total_entries):
-                                percent = (processed_entries / total_entries) * 100
-                                self.server.send_response(
-                                    player,
-                                    f"§8[Finder] Progreso caché: §f{processed_entries}/{total_entries} §8({percent:.1f}%)"
-                                )
-                                last_progress_at = now
-                            continue
-
-                        inventories_snapshot.append((dim, x, y, z, data.lower()))
-                        processed_entries += 1
-                        now = time.perf_counter()
-                        if total_entries and (now - last_progress_at >= 2.0 or processed_entries == total_entries):
-                            percent = (processed_entries / total_entries) * 100
-                            self.server.send_response(
-                                player,
-                                f"§8[Finder] Progreso caché: §f{processed_entries}/{total_entries} §8({percent:.1f}%)"
-                            )
-                            last_progress_at = now
-            finally:
-                self.server.execute('kill @e[tag=finder_scan_analysis]')
-                for (dim, chunk_x, chunk_z) in loaded_chunks_by_dim:
-                    self.server.execute(
-                        f'execute in minecraft:{dim} run forceload remove {chunk_x * 16} {chunk_z * 16}'
-                    )
-
-            if read_errors:
-                self.server.send_response(
-                    player,
-                    "§e⚠§f La búsqueda terminó con algunos errores de lectura."
-                )
-
-            self.find_region_cache[name] = {
-                'scanned_at': time.time(),
-                'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                'csv_mtime': csv_mtime,
-                'rows_count': len(rows),
-                'inventories': list(inventories_snapshot),
-            }
-            self._save_find_region_cache()
-            try:
-                cache_size = os.path.getsize(self.find_cache_path)
-                self.server.send_response(
-                    player,
-                    f"§8[Finder] Caché lista. §7Archivo: §f{self._format_size(cache_size)}"
-                )
-            except Exception:
-                self.server.send_response(player, "§8[Finder] Caché lista.")
+        if inventories_snapshot is None:
+            return
 
         found_locations = []
         for (dim, x, y, z, data_lc) in inventories_snapshot:
@@ -2130,3 +2057,117 @@ class mdplugin():
             'found': found,
             'found_locations': list(found_locations),
         }
+
+    async def   _get_or_build_place_cache(
+        self,
+        player: str,
+        name: str,
+        rows: list,
+        by_chunk: dict,
+        csv_mtime,
+        force_cache_refresh: bool = False
+    ):
+        now_ts = time.time()
+        cache_entry = self.find_region_cache.get(name)
+        use_region_cache = (
+            (not force_cache_refresh) and
+            cache_entry is not None and
+            (now_ts - cache_entry.get('scanned_at', 0)) <= self.find_cache_ttl_seconds and
+            cache_entry.get('csv_mtime') == csv_mtime and
+            cache_entry.get('rows_count') == len(rows)
+        )
+
+        if use_region_cache:
+            return list(cache_entry.get('inventories', []))
+
+        if force_cache_refresh:
+            self.server.send_response(player, "§8[Finder] Forzando recreación de caché...")
+
+        total_entries = len(rows)
+        inventories_snapshot = []
+        loaded_chunks_by_dim = set()
+        read_errors = 0
+        processed_entries = 0
+        last_progress_at = time.perf_counter()
+
+        self.server.send_response(player, "§8[Finder] Creando caché de la región...")
+
+        try:
+            for (dim, chunk_x, chunk_z) in by_chunk.keys():
+                loaded_chunks_by_dim.add((dim, chunk_x, chunk_z))
+                self.server.execute(
+                    f'execute in minecraft:{dim} run forceload add {chunk_x * 16} {chunk_z * 16}'
+                )
+            await asyncio.sleep(1)
+
+            for (dim, _, _), blocks in by_chunk.items():
+                for (x, y, z, block_type) in blocks:
+                    try:
+                        data = await self._get_block_data_with_retries(x, y, z, dim, path="Items")
+                    except Exception:
+                        read_errors += 1
+                        processed_entries += 1
+                        now = time.perf_counter()
+                        if total_entries and (now - last_progress_at >= 2.0 or processed_entries == total_entries):
+                            percent = (processed_entries / total_entries) * 100
+                            self.server.send_response(
+                                player,
+                                f"§8[Finder] Progreso caché: §f{processed_entries}/{total_entries} §8({percent:.1f}%)"
+                            )
+                            last_progress_at = now
+                        continue
+
+                    if not data or data == 'NOT_BLOCK_ENTITY':
+                        inventories_snapshot.append((dim, x, y, z, ""))
+                        processed_entries += 1
+                        now = time.perf_counter()
+                        if total_entries and (now - last_progress_at >= 2.0 or processed_entries == total_entries):
+                            percent = (processed_entries / total_entries) * 100
+                            self.server.send_response(
+                                player,
+                                f"§8[Finder] Progreso caché: §f{processed_entries}/{total_entries} §8({percent:.1f}%)"
+                            )
+                            last_progress_at = now
+                        continue
+
+                    inventories_snapshot.append((dim, x, y, z, data.lower()))
+                    processed_entries += 1
+                    now = time.perf_counter()
+                    if total_entries and (now - last_progress_at >= 2.0 or processed_entries == total_entries):
+                        percent = (processed_entries / total_entries) * 100
+                        self.server.send_response(
+                            player,
+                            f"§8[Finder] Progreso caché: §f{processed_entries}/{total_entries} §8({percent:.1f}%)"
+                        )
+                        last_progress_at = now
+        finally:
+            self.server.execute('kill @e[tag=finder_scan_analysis]')
+            for (dim, chunk_x, chunk_z) in loaded_chunks_by_dim:
+                self.server.execute(
+                    f'execute in minecraft:{dim} run forceload remove {chunk_x * 16} {chunk_z * 16}'
+                )
+
+        if read_errors:
+            self.server.send_response(
+                player,
+                "§e⚠§f La búsqueda terminó con algunos errores de lectura."
+            )
+
+        self.find_region_cache[name] = {
+            'scanned_at': time.time(),
+            'created_at': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            'csv_mtime': csv_mtime,
+            'rows_count': len(rows),
+            'inventories': list(inventories_snapshot),
+        }
+        self._save_find_region_cache()
+        try:
+            cache_size = os.path.getsize(self.find_cache_path)
+            self.server.send_response(
+                player,
+                f"§8[Finder] Caché lista. §7Archivo: §f{self._format_size(cache_size)}"
+            )
+        except Exception:
+            self.server.send_response(player, "§8[Finder] Caché lista.")
+
+        return inventories_snapshot

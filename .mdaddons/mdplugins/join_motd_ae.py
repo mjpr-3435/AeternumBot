@@ -23,7 +23,7 @@ class mdplugin():
         if self.server.is_command(message, 'motd help'):
             self.server.show_command(player, 'join-motd', 'Muestra el banner de entrada.')
             self.server.show_command(player, 'add-motd <tarea>', 'Añade un mensaje al motd.')
-            self.server.show_command(player, 'del-motd <index>', 'Elimina un mensjae del motd.')
+            self.server.show_command(player, 'del-motd <index>', 'Elimina un mensaje del motd.')
             
         elif self.server.is_command(message, 'join-motd'):
             self.show_motd(player)
@@ -66,11 +66,11 @@ class mdplugin():
         days = int((datetime.today()-datetime.strptime(self.foundation_date, "%Y-%m-%d")).days%365.25)
                 
         if years == 0:
-            active_days = f'Tiempo activo: {days} d?as'
+            active_days = f'Tiempo activo: {days} díaas'
         elif days == 0:
-            active_days = f'Tiempo activo: {years} a?os'
+            active_days = f'Tiempo activo: {years} años'
         else:
-            active_days = f'Tiempo activo: {years} a?os {days} d?as'
+            active_days = f'Tiempo activo: {years} años {days} días'
 
         server_buttons = []
         for server_name in ["SMP", "CMP", "MMP", "PMP"]:
@@ -79,14 +79,14 @@ class mdplugin():
             hover_text = ", ".join(online_players) if online_players else "Sin jugadores conectados."
             server_buttons.append(
                 hover_and_run(
-                    f'?l[{server_name}] ',
+                    f'§l[{server_name}] ',
                     color = 'white',
                     command = f'/server {server_name}',
                     hover = hover_text
                 )
             )
         
-        join_messages = [   '{"text" : "?f?lAeternum ?9?lNetwork"}',
+        join_messages = [   '{"text" : "§f§lAeternum §9§lNetwork"}',
                             '{"text" : "--------------------------"}',
                             extras(server_buttons, text= 'Servers: ', color = 'white'),
                             f'{{"text" : "{active_days}"}}',
@@ -99,7 +99,7 @@ class mdplugin():
             join_messages.append('{"text" : "--------------------------"}')
             
             for i in range(len(extra_messages)):
-                join_messages.append(f'{{"text" : "?8[{i + 1 }] ?r{extra_messages[i]}"}}')
+                join_messages.append(f'{{"text" : "§8[{i + 1 }] §r{extra_messages[i]}"}}')
 
         return join_messages
 
