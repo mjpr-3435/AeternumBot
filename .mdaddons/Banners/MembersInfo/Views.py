@@ -2,7 +2,7 @@ from mcdis_rcon.utils import mc_uuid
 from .Modules import *
 from .Embeds import *
 
-INTERVIEWER_ID = 889357182297071636
+INTERVIEWER_ID = 914530780523401267
 
 class banner_views(discord.ui.View):
     def __init__(self):

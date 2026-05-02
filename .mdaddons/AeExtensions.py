@@ -53,7 +53,10 @@ class mdaddon():
         
         await self.client.tree.sync()
 
+
+
         ### Banners ###
+
         from Banners.MembersInfo.Creator import members_creator, members_extras
         asyncio.create_task(members_extras          (self.client))
         task = asyncio.create_task(members_creator  (self.client))
@@ -67,6 +70,12 @@ class mdaddon():
         from Banners.HoneyPot.Creator import honey_pot_creator, honey_pot_extras
         asyncio.create_task(honey_pot_extras        (self.client))
         asyncio.create_task(honey_pot_creator       (self.client))
+
+        from Banners.InterviewersInfo.Creator import interviewers_creator, interviewers_extras
+        asyncio.create_task(interviewers_extras     (self.client))
+        asyncio.create_task(interviewers_creator    (self.client))
+
+
 
         ### Status ###
 

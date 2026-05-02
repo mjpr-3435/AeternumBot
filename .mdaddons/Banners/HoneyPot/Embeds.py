@@ -8,16 +8,11 @@ async def honey_pot_es_embed(client: McDisClient) -> discord.Embed:
     return (
         discord.Embed(
             colour=config["Accent Color"],
-            title="> HoneyPot",
+            title="> ⚠️ **NO ENVIAR MENSAJES**",
             description=(
-                "⚠️ **NO ENVIAR MENSAJES**\n"
-                "Si envías un mensaje aquí, serás considerado un bot y serás baneado."
+                "Si envías un mensaje aquí, serás baneado. "
+                "Este canal se usa para detectar spam de bots o cuentas hackeadas."
             ),
-        )
-        .add_field(
-            name="> Aviso De Seguridad",
-            inline=False,
-            value="Este canal está destinado únicamente a fines de seguridad para detectar spam, bots e intentos de abuso.",
         )
         .add_field(name="", inline=True, value=f"<#{log_thread.id}>")
         .set_thumbnail(url=config["Thumbnail"])
@@ -31,16 +26,11 @@ async def honey_pot_en_embed(client: McDisClient) -> discord.Embed:
     return (
         discord.Embed(
             colour=config["Accent Color"],
-            title="> HoneyPot",
+            title="> ⚠️ **DO NOT SEND MESSAGES**",
             description=(
-                "⚠️ **DO NOT SEND MESSAGES**\n"
-                "If you send a message here, you will be treated as a bot and banned."
+                "If you send a message here, you will be banned. "
+                "This channel is used to detect spam bots or compromised accounts."
             ),
-        )
-        .add_field(
-            name="> Security Notice",
-            inline=False,
-            value="This channel exists only for security purposes to detect spam bots and abuse attempts.",
         )
         .add_field(name="", inline=True, value=f"<#{log_thread.id}>")
         .set_thumbnail(url=config["Thumbnail"])

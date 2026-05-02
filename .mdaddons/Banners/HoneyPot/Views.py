@@ -13,7 +13,6 @@ class HoneyPotView(discord.ui.View):
 
     @discord.ui.button(
         label="En",
-        emoji=config["Bee Emoji"],
         style=discord.ButtonStyle.gray,
         custom_id="honeypot:lang_en",
         row=0,

@@ -1,4 +1,51 @@
 {
-  "banned": [],
-  "failed": []
+  "banned": [
+    {
+      "user_id": 329812809288384522,
+      "username": "nascar3382",
+      "message_id": 1493477075980652625,
+      "channel_id": 1490889830970691715,
+      "content": "",
+      "created_at": "2026-04-14T05:04:44.012517+00:00",
+      "error": null
+    },
+    {
+      "user_id": 1248444725950808141,
+      "username": "bbycheba",
+      "message_id": 1493613583487996035,
+      "channel_id": 1490889830970691715,
+      "content": "omg girl in cam join discord.gg/sweetygirl",
+      "created_at": "2026-04-14T14:07:09.220235+00:00",
+      "error": null
+    },
+    {
+      "user_id": 547477429246099466,
+      "username": "noeliaveg",
+      "message_id": 1495878758190551080,
+      "channel_id": 1490889830970691715,
+      "content": "",
+      "created_at": "2026-04-20T20:08:09.147731+00:00",
+      "error": null
+    },
+    {
+      "user_id": 1054870278414549103,
+      "username": "cfxfxcg",
+      "message_id": 1496736183194095741,
+      "channel_id": 1490889830970691715,
+      "content": "Form",
+      "created_at": "2026-04-23T04:55:14.968264+00:00",
+      "error": null
+    }
+  ],
+  "failed": [
+    {
+      "user_id": 444582897253351424,
+      "username": "kassiulo",
+      "message_id": 1491305269140000790,
+      "channel_id": 1490889830970691715,
+      "content": "",
+      "created_at": "2026-04-08T05:14:43.883294+00:00",
+      "error": "403 Forbidden (error code: 50013): Missing Permissions"
+    }
+  ]
 }

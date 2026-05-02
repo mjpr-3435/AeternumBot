@@ -24,7 +24,7 @@ class HoneyPotBehaviour(commands.Cog):
         try:
             await message.author.ban(
                 reason=config["Ban Reason"],
-                delete_message_seconds=0,
+                delete_message_seconds=config["Delete Message Seconds"],
             )
         except discord.HTTPException as error:
             register_honeypot_failed_ban(message, str(error))

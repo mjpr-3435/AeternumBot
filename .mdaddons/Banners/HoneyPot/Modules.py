@@ -14,10 +14,11 @@ config = {
     "Channel ID": 1490889830970691715,
     "Accent Color": 0xF2B632,
     "Bee Emoji": "🐝",
-    "Thumbnail": "https://i.postimg.cc/XqQx5rT5/logo.png",
+    "Thumbnail": "https://images-ext-1.discordapp.net/external/CFFcxTz-dvRCg5dWUuAAzAugpjj1KAvnkVB89Z69ZXQ/https/raw.githubusercontent.com/microsoft/fluentui-emoji/refs/heads/main/assets/Honey%2520pot/3D/honey_pot_3d.png?format=webp&quality=lossless&width=320&height=320",
     "Log Thread Name": "HoneyPot Log",
     "Button Cooldown": 5,
     "Ban Reason": "HoneyPot triggered: message sent in restricted security channel.",
+    "Delete Message Seconds": 86400,
 }
 
 stats_path = os.path.join(os.path.dirname(__file__), "HoneyPotStats.json")
