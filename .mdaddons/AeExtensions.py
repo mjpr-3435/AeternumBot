@@ -75,6 +75,10 @@ class mdaddon():
         asyncio.create_task(interviewers_extras     (self.client))
         asyncio.create_task(interviewers_creator    (self.client))
 
+        from Banners.AdministrationInfo.Creator import administration_creator, administration_extras
+        asyncio.create_task(administration_extras   (self.client))
+        asyncio.create_task(administration_creator  (self.client))
+
 
 
         ### Status ###
