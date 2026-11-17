@@ -87,6 +87,7 @@ class DiscordInfoConfig:
     form_emoji_yes: str
     form_emoji_no: str
     tickets_category_id: int
+    links: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,6 +107,7 @@ class AeternumConfig:
     """Centralized validated configuration for AeternumBot."""
 
     rcon_password: str
+    minecraft_version: str
     thumbnail: str
     server_emoji: str
     github: GitHubConfig
@@ -184,6 +186,7 @@ def save_aeternum_config_updates(path: Path, updates: Mapping[str, Any]) -> Aete
 def _build_aeternum_config(raw: Mapping[str, Any]) -> AeternumConfig:
     return AeternumConfig(
         rcon_password=_require_str(raw, 'RCON Password'),
+        minecraft_version=_require_str(raw, 'Minecraft Version') if 'Minecraft Version' in raw else '',
         thumbnail=_require_str(raw, 'Thumbnail'),
         server_emoji=_require_str(raw, 'Server Emoji'),
         github=_parse_github(raw),
@@ -316,6 +319,7 @@ def _parse_discord_info(data: Mapping[str, Any]) -> DiscordInfoConfig:
         form_emoji_yes=_require_str(info, 'Form Emoji Yes'),
         form_emoji_no=_require_str(info, 'Form Emoji No'),
         tickets_category_id=_require_int(info, 'Tickets Category ID'),
+        links=_require_str_tuple(info, 'Links') if 'Links' in info else (),
     )
 
 
@@ -373,6 +377,7 @@ GitHub:
 # =========================================
 
 RCON Password: ''
+Minecraft Version: ''
 
 # Jugadores con permisos administrativos dentro de Minecraft
 Admins: []
@@ -423,6 +428,7 @@ DiscordInfo:
   Form Emoji Yes: ''
   Form Emoji No: ''
   Tickets Category ID: 0
+  Links: []
 
 Tickets:
   Interviewer Role ID: 0

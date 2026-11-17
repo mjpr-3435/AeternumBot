@@ -240,6 +240,11 @@ class MinecraftModal(_BaseConfigModal):
             placeholder='Contraseña RCON',
             max_length=120,
         )
+        self.version_input = _text_input(
+            default=cfg.minecraft_version,
+            placeholder='Java 1.21.4',
+            max_length=40,
+        )
         self.admins_input = _text_input(
             default='\n'.join(cfg.admins),
             placeholder='Un nombre por línea:\nJugador1\nJugador2',
@@ -252,6 +257,7 @@ class MinecraftModal(_BaseConfigModal):
             max_length=64,
         )
         self.add_item(discord.ui.Label(text='RCON Password', component=self.rcon_input))
+        self.add_item(discord.ui.Label(text='Minecraft Version', component=self.version_input))
         self.add_item(
             discord.ui.Label(
                 text='Admins (Minecraft)',
@@ -264,6 +270,7 @@ class MinecraftModal(_BaseConfigModal):
     def build_updates(self) -> dict[str, Any]:
         return {
             'RCON Password': self.rcon_input.value.strip(),
+            'Minecraft Version': self.version_input.value.strip(),
             'Admins': [line.strip() for line in self.admins_input.value.splitlines() if line.strip()],
             'WorldTrimmer': {'Operator': self.operator_input.value.strip()},
         }
@@ -586,6 +593,41 @@ class DiscordInfoChannelsModal(_BaseConfigModal):
         }
 
 
+class DiscordInfoLinksModal(_BaseConfigModal):
+    def __init__(self, banner_view: ConfigBannerView) -> None:
+        super().__init__(
+            title='DiscordInfo: Links',
+            banner_view=banner_view,
+            section_label='DiscordInfo (Links)',
+        )
+        di = banner_view.cfg.discord_info
+        self.links_input = _text_input(
+            default='\n'.join(di.links),
+            placeholder='Overviewer,🌐,https://...\nYouTube,<:AeYoutube:...>,https://...',
+            max_length=1500,
+            style=discord.TextStyle.paragraph,
+        )
+        self.add_item(
+            discord.ui.Label(
+                text='Links (nombre,emoji,url)',
+                description='Una línea por link. Usa {invite} para la invitación de Discord.',
+                component=self.links_input,
+            )
+        )
+
+    def build_updates(self) -> dict[str, Any]:
+        parsed: list[str] = []
+        for idx, raw_line in enumerate(self.links_input.value.splitlines(), start=1):
+            line = raw_line.strip()
+            if not line:
+                continue
+            parts = [part.strip() for part in line.split(',', 2)]
+            if len(parts) != 3 or not parts[0] or not parts[2]:
+                raise ValueError(f'Línea {idx} inválida. Formato requerido: nombre,emoji,url')
+            parsed.append(f'{parts[0]},{parts[1]},{parts[2]}')
+        return {'DiscordInfo': {'Links': parsed}}
+
+
 class DiscordInfoDetailsModal(_BaseConfigModal):
     def __init__(self, banner_view: ConfigBannerView) -> None:
         super().__init__(
@@ -810,6 +852,7 @@ class ConfigBannerView(discord.ui.View):
         if self.page == 1:
             return (
                 f'- **RCON Password:** {_fmt_str(cfg.rcon_password, spoiler=True)}\n'
+                f'- **Minecraft Version:** {_fmt_str(cfg.minecraft_version)}\n'
                 f'- **Admins:** {_fmt_list(cfg.admins)}\n'
                 f'- **WorldTrimmer Operator:** {_fmt_str(cfg.world_trimmer.operator)}'
             )
@@ -846,6 +889,7 @@ class ConfigBannerView(discord.ui.View):
             )
         if self.page == 5:
             di = cfg.discord_info
+            links_txt = f'`{len(di.links)} link(s)`' if di.links else '*Sin configurar*'
             return (
                 f'**InterviewersInfo & Tickets**\n'
                 f'- **InterviewersInfo Channel:** {_fmt_channel(cfg.interviewers_info.channel_id)}\n'
@@ -857,7 +901,8 @@ class ConfigBannerView(discord.ui.View):
                 f'- **Tickets Category ID:** {_fmt_channel(di.tickets_category_id)}\n'
                 f'- **Foundation Date:** {_fmt_str(di.foundation_date)}\n'
                 f'- **Invite:** {_fmt_str(di.invite)}\n'
-                f'- **Form Emoji Yes / No:** {_fmt_str(di.form_emoji_yes)} / {_fmt_str(di.form_emoji_no)}'
+                f'- **Form Emoji Yes / No:** {_fmt_str(di.form_emoji_yes)} / {_fmt_str(di.form_emoji_no)}\n'
+                f'- **Links:** {links_txt}'
             )
         mi = cfg.members_info
         return (
@@ -895,7 +940,7 @@ class ConfigBannerView(discord.ui.View):
                     discord.SelectOption(
                         label='Minecraft',
                         value='minecraft',
-                        description='RCON Password, Admins y WorldTrimmer Operator',
+                        description='RCON Password, Version, Admins y WorldTrimmer Operator',
                     )
                 ],
                 {'minecraft': MinecraftModal},
@@ -966,11 +1011,17 @@ class ConfigBannerView(discord.ui.View):
                         value='discord_details',
                         description='Foundation Date, Invite y Form Emojis',
                     ),
+                    discord.SelectOption(
+                        label='DiscordInfo: Links',
+                        value='discord_links',
+                        description='Links en formato nombre,emoji,url (uno por línea)',
+                    ),
                 ],
                 {
                     'interviewers_tickets': InterviewersTicketsModal,
                     'discord_channels': DiscordInfoChannelsModal,
                     'discord_details': DiscordInfoDetailsModal,
+                    'discord_links': DiscordInfoLinksModal,
                 },
             )
 

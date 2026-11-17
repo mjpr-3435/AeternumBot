@@ -29,6 +29,8 @@ async def discord_creator(client: DisManagerClient, *, loop: bool = False) -> No
                 discord_cfg.invite,
                 foundation_date=discord_cfg.foundation_date,
                 thumbnail=ae_cfg.thumbnail,
+                version=ae_cfg.minecraft_version,
+                links=discord_cfg.links,
             )
 
             if not messages:

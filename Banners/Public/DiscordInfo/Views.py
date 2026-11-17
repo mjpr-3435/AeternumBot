@@ -104,6 +104,8 @@ class BannerEsViews(discord.ui.View):
                 ae_cfg.discord_info.invite,
                 foundation_date=ae_cfg.discord_info.foundation_date,
                 thumbnail=ae_cfg.thumbnail,
+                version=ae_cfg.minecraft_version,
+                links=ae_cfg.discord_info.links,
             ),
             ephemeral=True,
             view=BannerEnViews(self._server_emoji),

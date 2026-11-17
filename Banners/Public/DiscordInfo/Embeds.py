@@ -5,28 +5,32 @@ from datetime import datetime
 import discord
 
 _EMBED_COLOUR = 0x2F3136
-_LINK_YOUTUBE = 'https://www.youtube.com/channel/UCjjMAJirU2oWOrQPwGsDxYw'
-_LINK_TWITTER = 'https://twitter.com/aeternum_smp'
-_LINK_TWITCH = 'https://www.twitch.tv/aeternumsmp'
-_LINK_OVERVIEWER = 'http://map.aeternumsmp.com:25581/'
-_LINK_TIKTOK = 'https://www.tiktok.com/@aeternumsmp7'
-
-_EMOJI_DISCORD = '<:AeDiscord:1390864678540017739>'
-_EMOJI_YOUTUBE = '<:AeYoutube:1390864688425865296>'
-_EMOJI_TWITCH = '<:AeTwitch:1390864664791093319>'
-_EMOJI_TWITTER = '<:AeTwitter:1390864699255427173>'
-_EMOJI_PATREON = '<:AePatreon:1390869116755382353>'
-_EMOJI_TIKTOK = '<:AeTikTok:1403595577895161978>'
-_EMOJI_OVERVIEWER = '🌐'
-_LINK_PATREON = 'https://www.patreon.com/Aeternum_SMP'
 
 
 def _active_duration_parts(foundation_date: str) -> tuple[int, int]:
+    if not foundation_date.strip():
+        return 0, 0
     days_total = (
         datetime.now().date()
         - datetime.strptime(foundation_date, '%Y-%m-%d').date()
     ).days
     return int(days_total // 365.25), int(days_total % 365.25)
+
+
+def _format_links(links: tuple[str, ...], discord_invite: str, *, empty_text: str) -> str:
+    rendered: list[str] = []
+    for raw_entry in links:
+        parts = [part.strip() for part in raw_entry.split(',', 2)]
+        if len(parts) != 3:
+            continue
+        label, emoji, url = parts
+        if not label or not url:
+            continue
+        if url == '{invite}':
+            url = discord_invite
+        prefix = f'{emoji} ' if emoji else ''
+        rendered.append(f'{prefix}[{label}]({url})')
+    return '\n'.join(rendered) if rendered else empty_text
 
 
 def apply_en_embed() -> list[discord.Embed]:
@@ -100,7 +104,14 @@ def apply_es_embed() -> list[discord.Embed]:
     ]
 
 
-def banner_en_embed(discord_invite: str, *, foundation_date: str, thumbnail: str) -> discord.Embed:
+def banner_en_embed(
+    discord_invite: str,
+    *,
+    foundation_date: str,
+    thumbnail: str,
+    version: str = '',
+    links: tuple[str, ...] = (),
+) -> discord.Embed:
     """Build the English main DiscordInfo banner embed."""
     years, days = _active_duration_parts(foundation_date)
     if years == 0:
@@ -109,6 +120,12 @@ def banner_en_embed(discord_invite: str, *, foundation_date: str, thumbnail: str
         active_days = f'{years} years'
     else:
         active_days = f'{years} years {days} days'
+    foundation_label = (
+        datetime.strptime(foundation_date, '%Y-%m-%d').strftime('%d-%m-%Y')
+        if foundation_date.strip()
+        else 'Unconfigured'
+    )
+    links_value = _format_links(links, discord_invite, empty_text='*No links configured*')
 
     return (
         discord.Embed(
@@ -145,23 +162,15 @@ def banner_en_embed(discord_invite: str, *, foundation_date: str, thumbnail: str
         .add_field(
             name='Aeternum Links',
             inline=True,
-            value=(
-                f'{_EMOJI_OVERVIEWER} [Overviewer]({_LINK_OVERVIEWER})\n'
-                f'{_EMOJI_YOUTUBE} [YouTube]({_LINK_YOUTUBE})\n'
-                f'{_EMOJI_PATREON} [Patreon]({_LINK_PATREON})\n'
-                f'{_EMOJI_DISCORD} [Discord]({discord_invite})\n'
-                f'{_EMOJI_TWITTER} [Twitter]({_LINK_TWITTER})\n'
-                f'{_EMOJI_TIKTOK} [TikTok]({_LINK_TIKTOK})\n'
-                f'{_EMOJI_TWITCH} [Twitch]({_LINK_TWITCH})\n'
-            ),
+            value=links_value,
         )
         .add_field(
             name='Information',
             inline=True,
             value=(
                 f'Active Time: {active_days}\n'
-                f"Foundation: {foundation_date.replace('-', '/')}\n"
-                'Version: Java 1.21.4\n'
+                f'Foundation: {foundation_label}\n'
+                f"Version: {version or 'Unconfigured'}\n"
                 'Premium: Yes\n'
             ),
         )
@@ -169,7 +178,14 @@ def banner_en_embed(discord_invite: str, *, foundation_date: str, thumbnail: str
     )
 
 
-def banner_es_embed(discord_invite: str, *, foundation_date: str, thumbnail: str) -> discord.Embed:
+def banner_es_embed(
+    discord_invite: str,
+    *,
+    foundation_date: str,
+    thumbnail: str,
+    version: str = '',
+    links: tuple[str, ...] = (),
+) -> discord.Embed:
     """Build the Spanish main DiscordInfo banner embed."""
     years, days = _active_duration_parts(foundation_date)
     if years == 0:
@@ -178,6 +194,12 @@ def banner_es_embed(discord_invite: str, *, foundation_date: str, thumbnail: str
         active_days = f'{years} años'
     else:
         active_days = f'{years} años {days} días'
+    foundation_label = (
+        datetime.strptime(foundation_date, '%Y-%m-%d').strftime('%d-%m-%Y')
+        if foundation_date.strip()
+        else 'Sin configurar'
+    )
+    links_value = _format_links(links, discord_invite, empty_text='*Sin links configurados*')
 
     return (
         discord.Embed(
@@ -214,23 +236,15 @@ def banner_es_embed(discord_invite: str, *, foundation_date: str, thumbnail: str
         .add_field(
             name='Links de Aeternum',
             inline=True,
-            value=(
-                f'{_EMOJI_OVERVIEWER} [Overviewer]({_LINK_OVERVIEWER})\n'
-                f'{_EMOJI_YOUTUBE} [YouTube]({_LINK_YOUTUBE})\n'
-                f'{_EMOJI_PATREON} [Patreon]({_LINK_PATREON})\n'
-                f'{_EMOJI_DISCORD} [Discord]({discord_invite})\n'
-                f'{_EMOJI_TWITTER} [Twitter]({_LINK_TWITTER})\n'
-                f'{_EMOJI_TIKTOK} [TikTok]({_LINK_TIKTOK})\n'
-                f'{_EMOJI_TWITCH} [Twitch]({_LINK_TWITCH})\n'
-            ),
+            value=links_value,
         )
         .add_field(
             name='Información',
             inline=True,
             value=(
                 f'Tiempo activo: {active_days}\n'
-                f"Fundación: {foundation_date.replace('-', '/')}\n"
-                'Versión: Java 1.21.4\n'
+                f'Fundación: {foundation_label}\n'
+                f"Versión: {version or 'Sin configurar'}\n"
                 'Premium: Sí\n'
             ),
         )
