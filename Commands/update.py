@@ -17,7 +17,7 @@ from Utils.discord_helpers import is_admin
 _ADDONS_ROOT = Path(__file__).resolve().parent.parent
 _CONFIG_PATH = _ADDONS_ROOT / 'config.yml'
 _GITHUB_API = 'https://api.github.com'
-_ACCENT_COLOUR = 0x2ECC71
+_ACCENT_COLOUR = 0x2F3136
 
 _PROTECTED_PREFIXES = (
     '.legacy/',
@@ -161,13 +161,13 @@ class _ApplyUpdateButton(discord.ui.Button['UpdateAddonsView']):
             reloaded = await view.client.reload_addons()
         except Exception as exc:
             await interaction.followup.send(
-                f'❌ Error al actualizar: {exc}',
+                f'✖ Error al actualizar: {exc}',
                 ephemeral=True,
             )
             return
 
         await interaction.followup.send(
-            f'✅ Actualizado `{view.repo}@{view.branch}` (`{view.commit.sha}`): '
+            f'✔ Actualizado `{view.repo}@{view.branch}` (`{view.commit.sha}`): '
             f'**{updated_files}** archivo(s) reemplazado(s) y **{reloaded}** addon(s) recargado(s).\n'
             f'> `config.yml` y registros locales preservados.',
             ephemeral=True,
@@ -194,7 +194,7 @@ class UpdateAddonsView(discord.ui.LayoutView):
         self.commit = commit
 
         body = (
-            f'## 🔄 Actualizar Addons desde GitHub\n'
+            f'## Actualizar Addons desde GitHub\n'
             f'- **Repositorio:** `{repo}` (`{branch}`)\n'
             f'- **Último commit:** `{commit.sha}` · {commit.author}\n'
             f'- **Fecha:** `{commit.date_iso}`\n'
@@ -228,7 +228,7 @@ class UpdateCommandCog(commands.Cog):
     async def update_addons(self, interaction: discord.Interaction) -> None:
         if not isinstance(interaction.user, discord.Member) or not is_admin(interaction.user):
             await interaction.response.send_message(
-                '❌ Solo administradores pueden usar `/update addons`.',
+                '✖ Solo administradores pueden usar `/update addons`.',
                 ephemeral=True,
             )
             return
@@ -237,14 +237,14 @@ class UpdateCommandCog(commands.Cog):
             cfg = load_aeternum_config(_CONFIG_PATH)
             repo, branch, token = _validate_github_config(cfg.github)
         except (ValueError, AeternumConfigError) as exc:
-            await interaction.response.send_message(f'❌ {exc}', ephemeral=True)
+            await interaction.response.send_message(f'✖ {exc}', ephemeral=True)
             return
 
         await interaction.response.defer(ephemeral=True, thinking=True)
         try:
             commit = await _fetch_latest_commit(repo, branch, token)
         except Exception as exc:
-            await interaction.followup.send(f'❌ No se pudo consultar GitHub: {exc}', ephemeral=True)
+            await interaction.followup.send(f'✖ No se pudo consultar GitHub: {exc}', ephemeral=True)
             return
 
         view = UpdateAddonsView(

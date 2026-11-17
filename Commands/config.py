@@ -20,7 +20,7 @@ from Utils.discord_helpers import is_admin
 _ADDONS_ROOT = Path(__file__).resolve().parent.parent
 _CONFIG_PATH = _ADDONS_ROOT / 'config.yml'
 _PLUGINS_DIR = _ADDONS_ROOT / 'Plugins'
-_ACCENT_COLOUR = 0x5865F2
+_EMBED_COLOUR = 0x2F3136
 
 _PAGE_TITLES = (
     'General & Minecraft',
@@ -34,21 +34,21 @@ _PAGE_TITLES = (
 
 def _fmt_str(value: str, *, spoiler: bool = False) -> str:
     if not value.strip():
-        return '⚠️ Sin configurar'
+        return '*Sin configurar*'
     return f'||{value}||' if spoiler else f'`{value}`'
 
 
 def _fmt_channel(channel_id: int) -> str:
-    return f'<#{channel_id}> (`{channel_id}`)' if channel_id > 0 else '⚠️ Sin configurar'
+    return f'<#{channel_id}> (`{channel_id}`)' if channel_id > 0 else '*Sin configurar*'
 
 
 def _fmt_role(role_id: int) -> str:
-    return f'<@&{role_id}> (`{role_id}`)' if role_id > 0 else '⚠️ Sin configurar'
+    return f'<@&{role_id}> (`{role_id}`)' if role_id > 0 else '*Sin configurar*'
 
 
 def _fmt_list(values: tuple[str, ...]) -> str:
     if not values:
-        return '⚠️ Sin configurar'
+        return '*Sin configurar*'
     return ', '.join(f'`{item}`' for item in values)
 
 
@@ -178,18 +178,21 @@ class _BaseConfigModal(discord.ui.Modal):
             new_cfg = save_aeternum_config_updates(_CONFIG_PATH, updates)
         except (ValueError, AeternumConfigError) as exc:
             await interaction.response.send_message(
-                f'❌ Error de validación: {exc}',
+                f'✖ Error de validación: {exc}',
                 ephemeral=True,
             )
             return
 
         self.banner_view.cfg = new_cfg
         self.banner_view.status_notice = (
-            f'✅ **{self.section_label}** guardado en `config.yml`. '
+            f'✔ **{self.section_label}** guardado en `config.yml`. '
             'Ejecuta `!!adreload` cuando termines para aplicar los cambios.'
         )
         self.banner_view.rebuild()
-        await interaction.response.edit_message(view=self.banner_view)
+        await interaction.response.edit_message(
+            embed=self.banner_view.build_embed(),
+            view=self.banner_view,
+        )
 
 
 class GeneralMinecraftModal(_BaseConfigModal):
@@ -701,16 +704,20 @@ class MembersInfoExtraModal(_BaseConfigModal):
 class _PrevPageButton(discord.ui.Button['ConfigBannerView']):
     def __init__(self, *, disabled: bool) -> None:
         super().__init__(
-            label='◀ Anterior',
+            label='Anterior',
             style=discord.ButtonStyle.secondary,
             disabled=disabled,
+            row=1,
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
         assert self.view is not None
         self.view.page = max(0, self.view.page - 1)
         self.view.rebuild()
-        await interaction.response.edit_message(view=self.view)
+        await interaction.response.edit_message(
+            embed=self.view.build_embed(),
+            view=self.view,
+        )
 
 
 class _PageIndicatorButton(discord.ui.Button['ConfigBannerView']):
@@ -719,22 +726,27 @@ class _PageIndicatorButton(discord.ui.Button['ConfigBannerView']):
             label=f'Página {page + 1}/{total}',
             style=discord.ButtonStyle.secondary,
             disabled=True,
+            row=1,
         )
 
 
 class _NextPageButton(discord.ui.Button['ConfigBannerView']):
     def __init__(self, *, disabled: bool) -> None:
         super().__init__(
-            label='Siguiente ▶',
+            label='Siguiente',
             style=discord.ButtonStyle.secondary,
             disabled=disabled,
+            row=1,
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
         assert self.view is not None
         self.view.page = min(len(_PAGE_TITLES) - 1, self.view.page + 1)
         self.view.rebuild()
-        await interaction.response.edit_message(view=self.view)
+        await interaction.response.edit_message(
+            embed=self.view.build_embed(),
+            view=self.view,
+        )
 
 
 def _make_plugins_modal_factory(
@@ -757,6 +769,7 @@ class _EditSectionSelect(discord.ui.Select['ConfigBannerView']):
             min_values=1,
             max_values=1,
             options=options,
+            row=0,
         )
         self.modal_factories = modal_factories
 
@@ -764,13 +777,13 @@ class _EditSectionSelect(discord.ui.Select['ConfigBannerView']):
         assert self.view is not None
         factory = self.modal_factories.get(self.values[0])
         if factory is None:
-            await interaction.response.send_message('❌ Bloque desconocido.', ephemeral=True)
+            await interaction.response.send_message('✖ Bloque desconocido.', ephemeral=True)
             return
         await interaction.response.send_modal(factory(self.view))
 
 
-class ConfigBannerView(discord.ui.LayoutView):
-    """Paginated Components v2 configuration banner for ``AeternumBot/config.yml``."""
+class ConfigBannerView(discord.ui.View):
+    """Paginated configuration banner for ``AeternumBot/config.yml``."""
 
     def __init__(self, client: DisManagerClient, cfg: AeternumConfig) -> None:
         super().__init__(timeout=600)
@@ -801,7 +814,7 @@ class ConfigBannerView(discord.ui.LayoutView):
                 f'  - `{srv}`: {_fmt_list(cfg.plugins.get(srv, ()))}'
                 for srv in (processes or list(cfg.plugins))
             ]
-            plugins_text = '\n'.join(plugin_lines) if plugin_lines else '  - ⚠️ Sin servidores detectados'
+            plugins_text = '\n'.join(plugin_lines) if plugin_lines else '  - *Sin servidores detectados*'
             return (
                 f'- **Servers:** {_fmt_list(cfg.servers)}\n'
                 f'- **Guide Targets:** {_fmt_list(cfg.guide_targets)}\n'
@@ -818,8 +831,8 @@ class ConfigBannerView(discord.ui.LayoutView):
             )
         if self.page == 3:
             hp = cfg.honeypot
-            color_txt = f'`0x{hp.accent_color:06X}`' if hp.accent_color > 0 else '⚠️ Sin configurar'
-            del_txt = f'`{hp.delete_message_seconds}s`' if hp.delete_message_seconds > 0 else '⚠️ `0s`'
+            color_txt = f'`0x{hp.accent_color:06X}`' if hp.accent_color > 0 else '*Sin configurar*'
+            del_txt = f'`{hp.delete_message_seconds}s`' if hp.delete_message_seconds > 0 else '`0s`'
             return (
                 f'- **Channel ID:** {_fmt_channel(hp.channel_id)}\n'
                 f'- **Accent Color:** {color_txt}\n'
@@ -965,37 +978,23 @@ class ConfigBannerView(discord.ui.LayoutView):
             },
         )
 
+    def build_embed(self) -> discord.Embed:
+        title = _PAGE_TITLES[self.page]
+        embed = discord.Embed(
+            title=f'Configuración de AeternumBot · {self.page + 1}/{len(_PAGE_TITLES)} · {title}',
+            description=self._page_body(),
+            colour=_EMBED_COLOUR,
+        )
+        if self.status_notice:
+            embed.set_footer(text=self.status_notice)
+        return embed
+
     def rebuild(self) -> None:
         self.clear_items()
-        title = _PAGE_TITLES[self.page]
-        header = f'## ⚙️ Configuración de AeternumBot\n### {self.page + 1}/{len(_PAGE_TITLES)} · {title}'
-
-        children: list[discord.ui.Item[Any]] = [
-            discord.ui.TextDisplay(header),
-            discord.ui.Separator(),
-            discord.ui.TextDisplay(self._page_body()),
-        ]
-        if self.status_notice:
-            children.extend(
-                [
-                    discord.ui.Separator(),
-                    discord.ui.TextDisplay(self.status_notice),
-                ]
-            )
-
-        children.extend(
-            [
-                discord.ui.Separator(),
-                discord.ui.ActionRow(self._page_select()),
-                discord.ui.ActionRow(
-                    _PrevPageButton(disabled=self.page == 0),
-                    _PageIndicatorButton(self.page, len(_PAGE_TITLES)),
-                    _NextPageButton(disabled=self.page == len(_PAGE_TITLES) - 1),
-                ),
-            ]
-        )
-
-        self.add_item(discord.ui.Container(*children, accent_colour=_ACCENT_COLOUR))
+        self.add_item(self._page_select())
+        self.add_item(_PrevPageButton(disabled=self.page == 0))
+        self.add_item(_PageIndicatorButton(self.page, len(_PAGE_TITLES)))
+        self.add_item(_NextPageButton(disabled=self.page == len(_PAGE_TITLES) - 1))
 
 
 # =========================================
@@ -1015,7 +1014,7 @@ class ConfigCommandCog(commands.Cog):
     async def config_command(self, interaction: discord.Interaction) -> None:
         if not isinstance(interaction.user, discord.Member) or not is_admin(interaction.user):
             await interaction.response.send_message(
-                '❌ Solo administradores pueden usar `/config`.',
+                '✖ Solo administradores pueden usar `/config`.',
                 ephemeral=True,
             )
             return
@@ -1024,13 +1023,13 @@ class ConfigCommandCog(commands.Cog):
             cfg = load_aeternum_config(_CONFIG_PATH)
         except AeternumConfigError as exc:
             await interaction.response.send_message(
-                f'❌ No se pudo leer `config.yml`: {exc}',
+                f'✖ No se pudo leer `config.yml`: {exc}',
                 ephemeral=True,
             )
             return
 
         view = ConfigBannerView(self.client, cfg)
-        await interaction.response.send_message(view=view, ephemeral=True)
+        await interaction.response.send_message(embed=view.build_embed(), view=view, ephemeral=True)
 
 
 async def setup(client: DisManagerClient) -> None:
