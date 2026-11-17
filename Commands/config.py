@@ -632,15 +632,9 @@ class MembersInfoMainModal(_BaseConfigModal):
             placeholder='plugins.ejemplo.net',
             max_length=150,
         )
-        self.ip_dummy_input = _text_input(
-            default=mi.ip_dummy,
-            placeholder='dummy.ejemplo.net',
-            max_length=150,
-        )
         self.add_item(discord.ui.Label(text='Canal MembersInfo', component=self.channel_select))
         self.add_item(discord.ui.Label(text='IP Server', component=self.ip_server_input))
         self.add_item(discord.ui.Label(text='IP Plugins', component=self.ip_plugins_input))
-        self.add_item(discord.ui.Label(text='IP Dummy', component=self.ip_dummy_input))
 
     def build_updates(self) -> dict[str, Any]:
         return {
@@ -648,7 +642,6 @@ class MembersInfoMainModal(_BaseConfigModal):
                 'Channel ID': _selected_id(self.channel_select.values),
                 'IP Server': self.ip_server_input.value.strip(),
                 'IP Plugins': self.ip_plugins_input.value.strip(),
-                'IP Dummy': self.ip_dummy_input.value.strip(),
             }
         }
 
@@ -844,7 +837,6 @@ class ConfigBannerView(discord.ui.View):
             f'- **Channel ID:** {_fmt_channel(mi.channel_id)}\n'
             f'- **IP Server:** {_fmt_str(mi.ip_server)}\n'
             f'- **IP Plugins:** {_fmt_str(mi.ip_plugins)}\n'
-            f'- **IP Dummy:** {_fmt_str(mi.ip_dummy)}\n'
             f'- **Seed:** {_fmt_str(mi.seed)}\n'
             f'- **Paypal Link:** {_fmt_str(mi.paypal_link)}\n'
             f'- **Twitch Stream Key:** {_fmt_str(mi.twitch_stream_key, spoiler=True)}'
@@ -948,7 +940,7 @@ class ConfigBannerView(discord.ui.View):
                 discord.SelectOption(
                     label='MembersInfo: Canal e IPs',
                     value='members_main',
-                    description='Canal, IP Server, IP Plugins e IP Dummy',
+                    description='Canal, IP Server e IP Plugins',
                 ),
                 discord.SelectOption(
                     label='MembersInfo: Seed, PayPal & Twitch',

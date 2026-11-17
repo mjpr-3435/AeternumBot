@@ -96,7 +96,6 @@ class MembersInfoConfig:
     channel_id: int
     ip_server: str
     ip_plugins: str
-    ip_dummy: str
     seed: str
     paypal_link: str
     twitch_stream_key: str
@@ -326,7 +325,6 @@ def _parse_members_info(data: Mapping[str, Any]) -> MembersInfoConfig:
         channel_id=_require_int(info, 'Channel ID'),
         ip_server=_require_str(info, 'IP Server'),
         ip_plugins=_require_str(info, 'IP Plugins'),
-        ip_dummy=_require_str(info, 'IP Dummy'),
         seed=_require_str(info, 'Seed'),
         paypal_link=_require_str(info, 'Paypal Link'),
         twitch_stream_key=_require_str(info, 'Twitch Stream Key'),
@@ -433,7 +431,6 @@ MembersInfo:
   Channel ID: 0
   IP Server: ''
   IP Plugins: ''
-  IP Dummy: ''
   Seed: ''
   Paypal Link: ''
   Twitch Stream Key: ''

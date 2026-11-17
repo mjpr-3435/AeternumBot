@@ -109,7 +109,6 @@ async def _banner_embed(client: DisManagerClient, channel: discord.TextChannel) 
                 '||```prolog\n'
                 f"{('Ip:' + pad)[:-len(mi_cfg.ip_server)]}{mi_cfg.ip_server}\n"
                 f"{('Ip Plugins:' + pad)[:-len(mi_cfg.ip_plugins)]}{mi_cfg.ip_plugins}\n"
-                f"{('Ip Dummy:' + pad)[:-len(mi_cfg.ip_dummy)]}{mi_cfg.ip_dummy}\n"
                 f"{('Seed:' + pad)[:-len(mi_cfg.seed)]}{mi_cfg.seed}"
                 '```||\n'
             ),
