@@ -1,0 +1,1 @@
+- Los botones de texto de MC-Dis está rotos.
