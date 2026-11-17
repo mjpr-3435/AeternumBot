@@ -20,11 +20,7 @@ async def public_creator(client: DisManagerClient, *, loop: bool = False) -> Non
 
 
 async def public_extras(client: DisManagerClient) -> None:
-    """Initialize TicketSystem, Form, Showcase controls, and Public cogs."""
-    await load_tickets(client)
-    await load_forms(client)
-    await load_showcase_controls(client)
-
+    """Initialize Public cogs, TicketSystem, Form, and Showcase controls."""
     extensions = (
         'Banners.Public.TicketSystem.Behaviours',
         'Banners.Public.Showcase.ShowcaseCommand',
@@ -33,3 +29,7 @@ async def public_extras(client: DisManagerClient) -> None:
         if extension in client.extensions:
             await client.unload_extension(extension)
         await client.load_extension(extension)
+
+    await load_tickets(client)
+    await load_forms(client)
+    await load_showcase_controls(client)

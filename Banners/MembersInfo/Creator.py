@@ -68,9 +68,7 @@ async def members_creator(client: DisManagerClient, *, loop: bool = True) -> Non
 
 
 async def members_extras(client: DisManagerClient) -> None:
-    """Initialize task thread logs and MembersInfo cogs."""
-    await update_log(client)
-
+    """Initialize MembersInfo cogs and task thread logs."""
     extensions = (
         'Banners.MembersInfo.Tasks.TaskCommand',
         'Banners.MembersInfo.Tasks.TaskBehaviour',
@@ -79,6 +77,8 @@ async def members_extras(client: DisManagerClient) -> None:
         if extension in client.extensions:
             await client.unload_extension(extension)
         await client.load_extension(extension)
+
+    await update_log(client)
 
 
 async def _banner_embed(client: DisManagerClient, channel: discord.TextChannel) -> discord.Embed:
