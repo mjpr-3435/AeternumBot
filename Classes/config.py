@@ -49,6 +49,16 @@ class TicketsConfig:
     """Application ticket permissions and settings."""
 
     interviewer_role_id: int
+    category_id: int
+
+
+@dataclass(frozen=True, slots=True)
+class FormsConfig:
+    """Application form channel and reaction emoji settings."""
+
+    channel_id: int
+    emoji_yes: str
+    emoji_no: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,10 +93,6 @@ class DiscordInfoConfig:
     foundation_date: str
     invite: str
     showcase_id: int
-    forms_channel_id: int
-    form_emoji_yes: str
-    form_emoji_no: str
-    tickets_category_id: int
     links: tuple[str, ...]
     host_info: str
     carpet_rules: str
@@ -120,6 +126,7 @@ class AeternumConfig:
     chatbridge: ChatBridgeConfig
     tts: TtsConfig
     tickets: TicketsConfig
+    forms: FormsConfig
     world_trimmer: WorldTrimmerConfig
     honeypot: HoneyPotConfig
     interviewers_info: InterviewersInfoConfig
@@ -199,6 +206,7 @@ def _build_aeternum_config(raw: Mapping[str, Any]) -> AeternumConfig:
         chatbridge=_parse_chatbridge(raw),
         tts=_parse_tts(raw),
         tickets=_parse_tickets(raw),
+        forms=_parse_forms(raw),
         world_trimmer=_parse_world_trimmer(raw),
         honeypot=_parse_honeypot(raw),
         interviewers_info=_parse_interviewers_info(raw),
@@ -284,6 +292,20 @@ def _parse_tickets(data: Mapping[str, Any]) -> TicketsConfig:
     tickets = _require_mapping(data, 'Tickets')
     return TicketsConfig(
         interviewer_role_id=_require_int(tickets, 'Interviewer Role ID'),
+        category_id=_require_int(tickets, 'Category ID') if 'Category ID' in tickets else 0,
+    )
+
+
+def _parse_forms(data: Mapping[str, Any]) -> FormsConfig:
+    raw_forms = data.get('Forms')
+    if raw_forms is None:
+        return FormsConfig(channel_id=0, emoji_yes='', emoji_no='')
+    if not isinstance(raw_forms, Mapping):
+        raise AeternumConfigError("'Forms' must be a YAML mapping.")
+    return FormsConfig(
+        channel_id=_require_int(raw_forms, 'Channel ID') if 'Channel ID' in raw_forms else 0,
+        emoji_yes=_require_str(raw_forms, 'Emoji Yes') if 'Emoji Yes' in raw_forms else '',
+        emoji_no=_require_str(raw_forms, 'Emoji No') if 'Emoji No' in raw_forms else '',
     )
 
 
@@ -318,10 +340,6 @@ def _parse_discord_info(data: Mapping[str, Any]) -> DiscordInfoConfig:
         foundation_date=_require_str(info, 'Foundation Date'),
         invite=_require_str(info, 'Invite'),
         showcase_id=_require_int(info, 'Showcase ID'),
-        forms_channel_id=_require_int(info, 'Forms Channel ID'),
-        form_emoji_yes=_require_str(info, 'Form Emoji Yes'),
-        form_emoji_no=_require_str(info, 'Form Emoji No'),
-        tickets_category_id=_require_int(info, 'Tickets Category ID'),
         links=_require_str_tuple(info, 'Links') if 'Links' in info else (),
         host_info=_require_str(info, 'Host Info') if 'Host Info' in info else '',
         carpet_rules=_require_str(info, 'Carpet Rules') if 'Carpet Rules' in info else '',
@@ -430,17 +448,19 @@ DiscordInfo:
   Foundation Date: ''
   Invite: ''
   Showcase ID: 0
-  Forms Channel ID: 0
-  Form Emoji Yes: ''
-  Form Emoji No: ''
-  Tickets Category ID: 0
   Links: []
   Host Info: ''
   Carpet Rules: ''
   Server Mods: ''
 
+Forms:
+  Channel ID: 0
+  Emoji Yes: ''
+  Emoji No: ''
+
 Tickets:
   Interviewer Role ID: 0
+  Category ID: 0
 
 MembersInfo:
   Channel ID: 0

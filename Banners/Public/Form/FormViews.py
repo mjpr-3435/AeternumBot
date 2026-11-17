@@ -51,7 +51,7 @@ async def _append_answers_to_logged_form(
         return
 
     client = cast(DisManagerClient, interaction.client)
-    forms_channel = client.get_channel(get_ae_config(client).discord_info.forms_channel_id)
+    forms_channel = client.get_channel(get_ae_config(client).forms.channel_id)
     if not isinstance(forms_channel, discord.abc.Messageable):
         response = await interaction.followup.send(_missing_form_text(lang), wait=True)
         await response.delete(delay=8)
@@ -95,15 +95,15 @@ async def _submit_personal_form(
             value=question.value.strip()[:1024] or '-',
         )
 
-    discord_cfg = get_ae_config(client).discord_info
-    forms_channel = client.get_channel(discord_cfg.forms_channel_id)
+    forms_cfg = get_ae_config(client).forms
+    forms_channel = client.get_channel(forms_cfg.channel_id)
     if not isinstance(forms_channel, discord.abc.Messageable):
         return
 
     new_form = await forms_channel.send(embed=form_embed)
     for custom_emoji, fallback in (
-        (discord_cfg.form_emoji_yes, '✅'),
-        (discord_cfg.form_emoji_no, '❌'),
+        (forms_cfg.emoji_yes, '✅'),
+        (forms_cfg.emoji_no, '❌'),
     ):
         try:
             await new_form.add_reaction(custom_emoji)

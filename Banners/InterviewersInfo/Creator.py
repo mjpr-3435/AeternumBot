@@ -50,8 +50,8 @@ async def _interviewers_embed(channel: discord.TextChannel, *, ae_cfg: AeternumC
     )
     polls_thread = await get_or_create_thread('Encuestas', channel, public=True)
     forms_ch = (
-        f'<#{ae_cfg.discord_info.forms_channel_id}>'
-        if ae_cfg.discord_info.forms_channel_id > 0
+        f'<#{ae_cfg.forms.channel_id}>'
+        if ae_cfg.forms.channel_id > 0
         else '`Canal no definido`'
     )
     members_ch = (

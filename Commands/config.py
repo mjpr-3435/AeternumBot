@@ -542,21 +542,65 @@ class InterviewersTicketsModal(_BaseConfigModal):
             cfg.interviewers_info.channel_id,
             channel_types=[discord.ChannelType.text],
         )
+        self.tickets_category = _channel_select(
+            cfg.tickets.category_id,
+            channel_types=[discord.ChannelType.category],
+        )
         self.interviewer_role = _role_select(cfg.tickets.interviewer_role_id)
         self.add_item(discord.ui.Label(text='Canal InterviewersInfo', component=self.interviewers_channel))
+        self.add_item(discord.ui.Label(text='Categoría Tickets', component=self.tickets_category))
         self.add_item(discord.ui.Label(text='Rol Interviewer (Tickets)', component=self.interviewer_role))
 
     def build_updates(self) -> dict[str, Any]:
         return {
             'InterviewersInfo': {'Channel ID': _selected_id(self.interviewers_channel.values)},
-            'Tickets': {'Interviewer Role ID': _selected_id(self.interviewer_role.values)},
+            'Tickets': {
+                'Category ID': _selected_id(self.tickets_category.values),
+                'Interviewer Role ID': _selected_id(self.interviewer_role.values),
+            },
+        }
+
+
+class FormsModal(_BaseConfigModal):
+    def __init__(self, banner_view: ConfigBannerView) -> None:
+        super().__init__(
+            title='Forms',
+            banner_view=banner_view,
+            section_label='Forms',
+        )
+        forms = banner_view.cfg.forms
+        self.forms_channel = _channel_select(
+            forms.channel_id,
+            channel_types=[discord.ChannelType.text],
+        )
+        self.emoji_yes_input = _text_input(
+            default=forms.emoji_yes,
+            placeholder='<:PepeYes:...>',
+            max_length=120,
+        )
+        self.emoji_no_input = _text_input(
+            default=forms.emoji_no,
+            placeholder='<:PepeNo:...>',
+            max_length=120,
+        )
+        self.add_item(discord.ui.Label(text='Canal Forms', component=self.forms_channel))
+        self.add_item(discord.ui.Label(text='Emoji Yes', component=self.emoji_yes_input))
+        self.add_item(discord.ui.Label(text='Emoji No', component=self.emoji_no_input))
+
+    def build_updates(self) -> dict[str, Any]:
+        return {
+            'Forms': {
+                'Channel ID': _selected_id(self.forms_channel.values),
+                'Emoji Yes': self.emoji_yes_input.value.strip(),
+                'Emoji No': self.emoji_no_input.value.strip(),
+            }
         }
 
 
 class DiscordInfoChannelsModal(_BaseConfigModal):
     def __init__(self, banner_view: ConfigBannerView) -> None:
         super().__init__(
-            title='DiscordInfo: Canales y Categoría',
+            title='DiscordInfo: Canales',
             banner_view=banner_view,
             section_label='DiscordInfo (Canales)',
         )
@@ -569,26 +613,14 @@ class DiscordInfoChannelsModal(_BaseConfigModal):
             di.showcase_id,
             channel_types=[discord.ChannelType.text, discord.ChannelType.forum],
         )
-        self.forms_channel = _channel_select(
-            di.forms_channel_id,
-            channel_types=[discord.ChannelType.text],
-        )
-        self.tickets_category = _channel_select(
-            di.tickets_category_id,
-            channel_types=[discord.ChannelType.category],
-        )
         self.add_item(discord.ui.Label(text='Canal DiscordInfo', component=self.info_channel))
         self.add_item(discord.ui.Label(text='Canal Showcase', component=self.showcase_channel))
-        self.add_item(discord.ui.Label(text='Canal Forms', component=self.forms_channel))
-        self.add_item(discord.ui.Label(text='Categoría Tickets', component=self.tickets_category))
 
     def build_updates(self) -> dict[str, Any]:
         return {
             'DiscordInfo': {
                 'Channel ID': _selected_id(self.info_channel.values),
                 'Showcase ID': _selected_id(self.showcase_channel.values),
-                'Forms Channel ID': _selected_id(self.forms_channel.values),
-                'Tickets Category ID': _selected_id(self.tickets_category.values),
             }
         }
 
@@ -683,7 +715,7 @@ class DiscordInfoLinksModal(_BaseConfigModal):
 class DiscordInfoDetailsModal(_BaseConfigModal):
     def __init__(self, banner_view: ConfigBannerView) -> None:
         super().__init__(
-            title='DiscordInfo: Datos y Emojis',
+            title='DiscordInfo: Datos',
             banner_view=banner_view,
             section_label='DiscordInfo (Datos)',
         )
@@ -698,20 +730,8 @@ class DiscordInfoDetailsModal(_BaseConfigModal):
             placeholder='https://discord.gg/...',
             max_length=200,
         )
-        self.emoji_yes_input = _text_input(
-            default=di.form_emoji_yes,
-            placeholder='<:PepeYes:...>',
-            max_length=120,
-        )
-        self.emoji_no_input = _text_input(
-            default=di.form_emoji_no,
-            placeholder='<:PepeNo:...>',
-            max_length=120,
-        )
         self.add_item(discord.ui.Label(text='Foundation Date (YYYY-MM-DD)', component=self.foundation_input))
         self.add_item(discord.ui.Label(text='Invite URL', component=self.invite_input))
-        self.add_item(discord.ui.Label(text='Form Emoji Yes', component=self.emoji_yes_input))
-        self.add_item(discord.ui.Label(text='Form Emoji No', component=self.emoji_no_input))
 
     def build_updates(self) -> dict[str, Any]:
         foundation = self.foundation_input.value.strip()
@@ -721,8 +741,6 @@ class DiscordInfoDetailsModal(_BaseConfigModal):
             'DiscordInfo': {
                 'Foundation Date': foundation,
                 'Invite': self.invite_input.value.strip(),
-                'Form Emoji Yes': self.emoji_yes_input.value.strip(),
-                'Form Emoji No': self.emoji_no_input.value.strip(),
             }
         }
 
@@ -970,6 +988,7 @@ class ConfigBannerView(discord.ui.View):
             )
         if self.page == 5:
             di = cfg.discord_info
+            forms = cfg.forms
             links_txt = f'`{len(di.links)} link(s)`' if di.links else '*Sin configurar*'
             host_txt = '`Configurado`' if di.host_info.strip() else '*Sin configurar*'
             rules_txt = '`Configurado`' if di.carpet_rules.strip() else '*Sin configurar*'
@@ -977,15 +996,16 @@ class ConfigBannerView(discord.ui.View):
             return (
                 f'**InterviewersInfo & Tickets**\n'
                 f'- **InterviewersInfo Channel:** {_fmt_channel(cfg.interviewers_info.channel_id)}\n'
+                f'- **Tickets Category ID:** {_fmt_channel(cfg.tickets.category_id)}\n'
                 f'- **Interviewer Role:** {_fmt_role(cfg.tickets.interviewer_role_id)}\n\n'
+                f'**Forms**\n'
+                f'- **Channel ID:** {_fmt_channel(forms.channel_id)}\n'
+                f'- **Emoji Yes / No:** {_fmt_str(forms.emoji_yes)} / {_fmt_str(forms.emoji_no)}\n\n'
                 f'**DiscordInfo**\n'
                 f'- **Channel ID:** {_fmt_channel(di.channel_id)}\n'
                 f'- **Showcase ID:** {_fmt_channel(di.showcase_id)}\n'
-                f'- **Forms Channel ID:** {_fmt_channel(di.forms_channel_id)}\n'
-                f'- **Tickets Category ID:** {_fmt_channel(di.tickets_category_id)}\n'
                 f'- **Foundation Date:** {_fmt_str(di.foundation_date)}\n'
                 f'- **Invite:** {_fmt_str(di.invite)}\n'
-                f'- **Form Emoji Yes / No:** {_fmt_str(di.form_emoji_yes)} / {_fmt_str(di.form_emoji_no)}\n'
                 f'- **Links:** {links_txt}\n'
                 f'- **Server Info (Host / Carpet / Mods):** {host_txt} / {rules_txt} / {mods_txt}'
             )
@@ -1084,17 +1104,22 @@ class ConfigBannerView(discord.ui.View):
                     discord.SelectOption(
                         label='InterviewersInfo & Tickets',
                         value='interviewers_tickets',
-                        description='Canal de Interviewers y rol Interviewer',
+                        description='Canal de Interviewers, categoría y rol de Tickets',
                     ),
                     discord.SelectOption(
-                        label='DiscordInfo: Canales y Categoría',
+                        label='Forms',
+                        value='forms',
+                        description='Canal de Forms y emojis Yes / No',
+                    ),
+                    discord.SelectOption(
+                        label='DiscordInfo: Canales',
                         value='discord_channels',
-                        description='Channel, Showcase, Forms y Tickets Category',
+                        description='Canal DiscordInfo y canal Showcase',
                     ),
                     discord.SelectOption(
-                        label='DiscordInfo: Datos y Emojis',
+                        label='DiscordInfo: Datos',
                         value='discord_details',
-                        description='Foundation Date, Invite y Form Emojis',
+                        description='Foundation Date e Invite',
                     ),
                     discord.SelectOption(
                         label='DiscordInfo: Links',
@@ -1109,6 +1134,7 @@ class ConfigBannerView(discord.ui.View):
                 ],
                 {
                     'interviewers_tickets': InterviewersTicketsModal,
+                    'forms': FormsModal,
                     'discord_channels': DiscordInfoChannelsModal,
                     'discord_details': DiscordInfoDetailsModal,
                     'discord_links': DiscordInfoLinksModal,

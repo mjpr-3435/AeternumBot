@@ -34,7 +34,7 @@ async def ticket_creation(
 
     ae_config = get_ae_config(client)
     category = next(
-        (cat for cat in guild.categories if cat.id == ae_config.discord_info.tickets_category_id),
+        (cat for cat in guild.categories if cat.id == ae_config.tickets.category_id),
         None,
     )
     interviewer = guild.get_role(ae_config.tickets.interviewer_role_id)
