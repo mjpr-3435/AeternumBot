@@ -8,12 +8,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from Classes.AeServer import AeServer
+from Classes.config import get_ae_servers
 from dismanager.classes import BasePlugin, ManagedProcess
 from dismanager.core.files import copy_tree_with_progress
 from dismanager.core.managed_process import BackupEntry
-
-from Classes import AeServer, get_ae_servers
-from Utils import extras, hover, hover_and_suggest
+from Utils.minecraft_text import extras, hover, hover_and_suggest
 
 
 class plugin(BasePlugin):

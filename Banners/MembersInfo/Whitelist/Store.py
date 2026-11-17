@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import TypedDict
 
-from Classes import get_ae_servers
+from Classes.config import get_ae_servers
 from dismanager.classes import DisManagerClient
 from Utils.minecraft_api import mc_uuid
 

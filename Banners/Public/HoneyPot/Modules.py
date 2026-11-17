@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import discord
-from Classes import get_ae_config
+from Classes.config import get_ae_config
 from dismanager.classes import DisManagerClient
 
 _STATS_PATH = Path(__file__).resolve().parent / 'HoneyPotStats.json'

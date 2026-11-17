@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from Classes.AeServer import AeServer
+from Classes.config import get_ae_servers
 from dismanager.classes import BasePlugin, ManagedProcess
-
-from Classes import AeServer, get_ae_servers
 
 
 class plugin(BasePlugin):

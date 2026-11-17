@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import discord
+from Classes.AeServer import AeServer
+from Classes.config import get_ae_config, get_ae_servers
 from discord.ext import commands
 from dismanager.classes import DisManagerClient
-
-from Classes import AeServer, get_ae_config, get_ae_servers
 
 _EMBED_COLOUR = 0x2F3136
 

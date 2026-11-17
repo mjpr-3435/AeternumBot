@@ -3,9 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 
 import discord
+from Classes.config import get_ae_config
 from dismanager.classes import DisManagerClient
-
-from Classes import get_ae_config
 
 
 def form_banner_embed(client: DisManagerClient, lang: str = 'es') -> discord.Embed:

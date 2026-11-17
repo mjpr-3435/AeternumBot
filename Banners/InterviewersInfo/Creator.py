@@ -3,9 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import discord
+from Classes.config import get_ae_config
 from dismanager.classes import DisManagerClient
-
-from Classes import get_ae_config
 from Utils.discord_helpers import get_or_create_thread
 
 from .Views import InterviewersInfoView

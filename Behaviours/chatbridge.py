@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import discord
+from Classes.config import get_ae_config, get_ae_servers
 from discord.ext import commands
 from dismanager.classes import DisManagerClient
-
-from Classes import get_ae_config, get_ae_servers
 
 
 class ChatBridgeBehaviour(commands.Cog):

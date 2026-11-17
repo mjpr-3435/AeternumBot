@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import discord
-from Classes import (
+from Classes.config import (
     AeternumConfig,
     AeternumConfigError,
     load_aeternum_config,

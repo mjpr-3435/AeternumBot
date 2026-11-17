@@ -5,9 +5,8 @@ import traceback
 
 import aiohttp
 import discord
+from Classes.config import get_ae_config
 from dismanager.classes import DisManagerClient
-
-from Classes import get_ae_config
 
 from .Embeds import banner_es_embed
 from .Views import BannerEsViews

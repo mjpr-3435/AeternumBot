@@ -7,7 +7,7 @@ from Banners.Public.HoneyPot.Modules import (
     resolve_honeypot_channel,
 )
 from Banners.Public.HoneyPot.Views import build_honeypot_view
-from Classes import get_ae_config
+from Classes.config import get_ae_config
 from discord.ext import commands
 from dismanager.classes import DisManagerClient
 from Utils.discord_helpers import get_or_create_thread

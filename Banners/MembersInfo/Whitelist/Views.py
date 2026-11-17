@@ -5,7 +5,7 @@ from datetime import date
 from typing import cast
 
 import discord
-from Classes import get_ae_config
+from Classes.config import get_ae_config
 from dismanager.classes import DisManagerClient
 from Utils.discord_helpers import get_or_create_thread, is_admin
 from Utils.minecraft_api import mc_uuid

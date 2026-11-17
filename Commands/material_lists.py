@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dismanager.classes import DisManagerClient
-
 from MaterialLists.material_lists import MaterialListsCog as BaseMaterialListsCog
 
 

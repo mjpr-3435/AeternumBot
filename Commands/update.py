@@ -8,7 +8,7 @@ from typing import Any
 
 import aiohttp
 import discord
-from Classes import AeternumConfigError, GitHubConfig, load_aeternum_config
+from Classes.config import AeternumConfigError, GitHubConfig, load_aeternum_config
 from discord import app_commands
 from discord.ext import commands
 from dismanager.classes import DisManagerClient

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import cast
 
 import discord
-from Classes import get_ae_config
+from Classes.config import get_ae_config
 from dismanager.classes import DisManagerClient
 from Utils.discord_helpers import get_or_create_thread
 

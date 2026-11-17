@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Any
 
 import discord
-from Classes import AeServer, AeternumConfig, load_aeternum_config
+from Classes.AeServer import AeServer
+from Classes.config import AeternumConfig, load_aeternum_config
 from dismanager.classes import BaseAddon, DisManagerClient, ManagedProcess
 
 _COG_DIRS = ('Commands', 'ContextMenus', 'Behaviours')

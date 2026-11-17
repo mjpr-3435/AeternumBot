@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from Banners.MembersInfo.Whitelist import update_player_date
-from dismanager.core.managed_process import BackupEntry, ManagedProcess
-from Utils import RconError, ensure_rcon_properties, hover_and_suggest, rcon_execute
-
 from Classes.config import AeternumConfig
+from dismanager.core.managed_process import BackupEntry, ManagedProcess
+from Utils.minecraft_text import hover_and_suggest
+from Utils.rcon import RconError, ensure_rcon_properties, rcon_execute
 
 if TYPE_CHECKING:
     from dismanager.classes import DisManagerClient

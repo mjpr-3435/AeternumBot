@@ -7,9 +7,8 @@ from pathlib import Path
 
 import aiohttp
 import discord
+from Classes.config import get_ae_config
 from dismanager.classes import DisManagerClient
-
-from Classes import get_ae_config
 from Utils.discord_helpers import get_or_create_thread
 
 from .Tasks.TaskLog import show_tasks, update_log

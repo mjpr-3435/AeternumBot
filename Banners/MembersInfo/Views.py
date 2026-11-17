@@ -3,9 +3,8 @@ from __future__ import annotations
 from typing import cast
 
 import discord
+from Classes.config import get_ae_config
 from dismanager.classes import DisManagerClient
-
-from Classes import get_ae_config
 from Utils.discord_helpers import is_admin
 
 from .Embeds import apoyo_embed, twitch_embed

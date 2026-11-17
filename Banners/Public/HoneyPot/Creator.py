@@ -5,7 +5,7 @@ import traceback
 
 import aiohttp
 import discord
-from Classes import get_ae_config
+from Classes.config import get_ae_config
 from dismanager.classes import DisManagerClient
 
 from .Modules import find_honeypot_banner_message, resolve_honeypot_channel

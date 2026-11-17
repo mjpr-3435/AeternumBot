@@ -9,9 +9,9 @@ import urllib.request
 from pathlib import Path
 
 import discord
+from Classes.AeServer import AeServer
+from Classes.config import get_ae_config, get_ae_servers
 from dismanager.classes import BasePlugin, ManagedProcess
-
-from Classes import AeServer, get_ae_config, get_ae_servers
 
 _MCA_VERSION = '2.7'
 _MCA_URL = 'https://github.com/Querz/mcaselector/releases/download/2.7/mcaselector-2.7.jar'

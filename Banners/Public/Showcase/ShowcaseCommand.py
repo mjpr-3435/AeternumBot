@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import discord
+from Classes.config import get_ae_config
 from discord import app_commands
 from discord.ext import commands
 from dismanager.classes import DisManagerClient
-
-from Classes import get_ae_config
 from Utils.discord_helpers import is_admin
 
 from .ShowcaseTools import default_post_text, ensure_showcase_post_menu, thread_name

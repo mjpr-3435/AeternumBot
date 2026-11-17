@@ -3,13 +3,14 @@ from __future__ import annotations
 import math
 from typing import Any
 
+from Classes.AeServer import AeServer
+from Classes.config import get_ae_servers
 from dismanager.classes import BasePlugin, ManagedProcess
+from Utils.minecraft_text import hover_and_suggest
 
-from Classes import AeServer, get_ae_servers
-from Utils import hover_and_suggest
-
+np: Any
 try:
-    import numpy as np  # type: ignore[import-not-found]
+    import numpy as np
 except ImportError:
     np = None
 

@@ -4,9 +4,8 @@ from datetime import datetime
 from typing import Any, cast
 
 import discord
+from Classes.config import get_ae_config
 from dismanager.classes import DisManagerClient
-
-from Classes import get_ae_config
 
 from .LogInteraction import form_info_request, form_info_update
 

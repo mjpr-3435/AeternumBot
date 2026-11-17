@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 
 import psutil
+from Classes.AeServer import AeServer
+from Classes.config import get_ae_servers
 from dismanager.classes import BasePlugin, ManagedProcess
-
-from Classes import AeServer, get_ae_servers
-from Utils import extras, hover
+from Utils.minecraft_text import extras, hover
 
 
 class plugin(BasePlugin):

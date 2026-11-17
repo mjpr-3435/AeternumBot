@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import discord
+from Classes.config import get_ae_config
 from discord import app_commands
 from discord.app_commands import Choice, choices, describe
 from discord.ext import commands
 from dismanager.classes import DisManagerClient
-
-from Classes import get_ae_config
 from Utils.discord_helpers import is_admin
 
 from ..Creator import members_creator
