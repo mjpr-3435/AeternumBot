@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import discord
-from Classes.config import get_ae_config
+from Classes.config import AeternumConfig, get_ae_config
 from dismanager.classes import DisManagerClient
 from Utils.discord_helpers import get_or_create_thread
 
@@ -22,7 +22,7 @@ async def interviewers_creator(client: DisManagerClient) -> None:
         return
 
     messages = [msg async for msg in channel.history(limit=None, oldest_first=True)]
-    banner = await _interviewers_embed(channel, thumbnail=ae_cfg.thumbnail)
+    banner = await _interviewers_embed(channel, ae_cfg=ae_cfg)
     view = InterviewersInfoView(ae_cfg.thumbnail)
 
     if not messages:
@@ -42,13 +42,23 @@ async def interviewers_extras(client: DisManagerClient) -> None:
     _ = client
 
 
-async def _interviewers_embed(channel: discord.TextChannel, *, thumbnail: str) -> discord.Embed:
+async def _interviewers_embed(channel: discord.TextChannel, *, ae_cfg: AeternumConfig) -> discord.Embed:
     resources_thread = await get_or_create_thread(
         'Recursos de Entrevistadores',
         channel,
         public=True,
     )
     polls_thread = await get_or_create_thread('Encuestas', channel, public=True)
+    forms_ch = (
+        f'<#{ae_cfg.discord_info.forms_channel_id}>'
+        if ae_cfg.discord_info.forms_channel_id > 0
+        else '`Canal no definido`'
+    )
+    members_ch = (
+        f'<#{ae_cfg.members_info.channel_id}>'
+        if ae_cfg.members_info.channel_id > 0
+        else '`Canal no definido`'
+    )
 
     return (
         discord.Embed(
@@ -67,12 +77,12 @@ async def _interviewers_embed(channel: discord.TextChannel, *, thumbnail: str) -
             name='> Qué hace un entrevistador',
             inline=False,
             value=(
-                '- Puede ver los formularios en <#892445483472142346> y votar.\n'
+                f'- Puede ver los formularios en {forms_ch} y votar.\n'
                 '- Puede ver y escribir en los tickets.\n'
                 '- Coordina entrevistas cuando haga falta.\n'
                 '- Marca el estado del ticket con `/ticket`.\n'
-                '- Añade o remueve gente de la whitelist desde <#914533677411754024>.'
+                f'- Añade o remueve gente de la whitelist desde {members_ch}.'
             ),
         )
-        .set_thumbnail(url=thumbnail)
+        .set_thumbnail(url=ae_cfg.thumbnail)
     )

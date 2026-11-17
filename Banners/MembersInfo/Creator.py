@@ -84,16 +84,22 @@ async def members_extras(client: DisManagerClient) -> None:
 async def _banner_embed(client: DisManagerClient, channel: discord.TextChannel) -> discord.Embed:
     ae_cfg = get_ae_config(client)
     mi_cfg = ae_cfg.members_info
-    foundation = ae_cfg.discord_info.foundation_date
-    days_total = (datetime.now().date() - datetime.strptime(foundation, '%Y-%m-%d').date()).days
-    years, days = int(days_total // 365.25), int(days_total % 365.25)
+    foundation = ae_cfg.discord_info.foundation_date.strip()
+    if foundation:
+        foundation_dt = datetime.strptime(foundation, '%Y-%m-%d').date()
+        foundation_label = foundation_dt.strftime('%d-%m-%Y')
+        days_total = (datetime.now().date() - foundation_dt).days
+        years, days = int(days_total // 365.25), int(days_total % 365.25)
 
-    if years == 0:
-        active_days = f'Tiempo activo: {days} días'
-    elif days == 0:
-        active_days = f'Tiempo activo: {years} años'
+        if years == 0:
+            active_days = f'Tiempo activo: {days} días'
+        elif days == 0:
+            active_days = f'Tiempo activo: {years} años'
+        else:
+            active_days = f'Tiempo activo: {years} años {days} días'
     else:
-        active_days = f'Tiempo activo: {years} años {days} días'
+        foundation_label = 'Sin configurar'
+        active_days = 'Tiempo activo: Sin configurar'
 
     announcements = await get_or_create_thread('Announcements', channel, public=True)
     whitelist_log = await get_or_create_thread('Whitelist Log', channel, public=True)
@@ -116,7 +122,7 @@ async def _banner_embed(client: DisManagerClient, channel: discord.TextChannel) 
         .add_field(name='', inline=True, value=f'<#{announcements.id}>')
         .add_field(name='', inline=True, value=f'<#{whitelist_log.id}>')
         .add_field(name='', inline=True, value=f'<#{server_log.id}>')
-        .add_field(name='', inline=True, value=f"Fundación: {foundation.replace('-', '/')}")
+        .add_field(name='', inline=True, value=f'Fundación: {foundation_label}')
         .add_field(name='', inline=True, value=active_days)
         .add_field(
             name='',
@@ -138,7 +144,7 @@ async def _banner_embed(client: DisManagerClient, channel: discord.TextChannel) 
         .add_field(
             name='> Tareas de Proyectos:',
             inline=False,
-            value=show_tasks(client) or '—',
+            value=show_tasks(client) or 'No hay tareas activas.',
         )
         .set_thumbnail(url=ae_cfg.thumbnail)
     )

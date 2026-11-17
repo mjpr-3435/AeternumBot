@@ -242,6 +242,7 @@ class PurgeInactivesModal(discord.ui.Modal, title='Purge Inactives'):
     )
     exclusions: discord.ui.TextInput[PurgeInactivesModal] = discord.ui.TextInput(
         label='Excluir nombres',
+        placeholder='Un nombre por línea:\nJugador1\nJugador2',
         required=False,
         style=discord.TextStyle.paragraph,
     )

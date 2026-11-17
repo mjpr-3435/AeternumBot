@@ -92,12 +92,14 @@ def _text_input(
     default: str,
     placeholder: str,
     max_length: int,
+    style: discord.TextStyle = discord.TextStyle.short,
 ) -> discord.ui.TextInput[Any]:
     return discord.ui.TextInput(
         default=default,
         placeholder=placeholder,
         required=False,
         max_length=max_length,
+        style=style,
     )
 
 
@@ -220,9 +222,10 @@ class GeneralMinecraftModal(_BaseConfigModal):
             max_length=120,
         )
         self.admins_input = _text_input(
-            default=', '.join(cfg.admins),
-            placeholder='Jugador1, Jugador2, ...',
+            default='\n'.join(cfg.admins),
+            placeholder='Un nombre por línea:\nJugador1\nJugador2',
             max_length=500,
+            style=discord.TextStyle.paragraph,
         )
         self.operator_input = _text_input(
             default=cfg.world_trimmer.operator,
@@ -236,7 +239,7 @@ class GeneralMinecraftModal(_BaseConfigModal):
         self.add_item(
             discord.ui.Label(
                 text='Admins (Minecraft)',
-                description='Nombres separados por coma.',
+                description='Un nombre por línea.',
                 component=self.admins_input,
             )
         )
@@ -247,7 +250,7 @@ class GeneralMinecraftModal(_BaseConfigModal):
             'Thumbnail': self.thumbnail_input.value.strip(),
             'Server Emoji': self.emoji_input.value.strip(),
             'RCON Password': self.rcon_input.value.strip(),
-            'Admins': _parse_csv(self.admins_input.value),
+            'Admins': [line.strip() for line in self.admins_input.value.splitlines() if line.strip()],
             'WorldTrimmer': {'Operator': self.operator_input.value.strip()},
         }
 
