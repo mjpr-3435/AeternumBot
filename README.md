@@ -4,10 +4,11 @@ Addon de Discord y Minecraft para **Aeternum SMP**, pensado para ejecutarse sobr
 
 ## Uso rápido
 
-1. Coloca este repositorio dentro de la carpeta `.addons/` de tu instancia de **DisManager** (o móntalo como `.addons`).
-2. Inicia **DisManager**. Si `config.yml` aún no existe, se creará automáticamente con la plantilla vacía.
-3. En Discord, ejecuta `/config` (solo administradores) para configurar canales, servidores, RCON, banners y opcionalmente el repositorio/token de GitHub.
-4. Ejecuta `!!adreload` en el panel de **DisManager** para aplicar la configuración.
+1. Instala las dependencias en el entorno de **DisManager**: `pip install -r requirements.txt`.
+2. Coloca este repositorio dentro de la carpeta `.addons/` de tu instancia de **DisManager** (o móntalo como `.addons`).
+3. Inicia **DisManager**. Si `config.yml` aún no existe, se creará automáticamente con la plantilla vacía.
+4. En Discord, ejecuta `/config` (solo administradores) para configurar canales, servidores, RCON, banners y opcionalmente el repositorio/token de GitHub.
+5. Ejecuta `!!adreload` en el panel de **DisManager** para aplicar la configuración.
 
 ## Actualizaciones
 

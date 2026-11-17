@@ -1,0 +1,7 @@
+aiohttp>=3.9.0
+aiomcrcon>=3.0.0
+discord.py>=2.7.0
+nbtlib>=2.0.0
+numpy>=2.0.0
+psutil>=5.9.0
+ruamel.yaml>=0.18.0
