@@ -23,7 +23,8 @@ _PLUGINS_DIR = _ADDONS_ROOT / 'Plugins'
 _EMBED_COLOUR = 0x2F3136
 
 _PAGE_TITLES = (
-    'General & Minecraft',
+    'General',
+    'Minecraft',
     'Servidores & Plugins',
     'Comunicación',
     'Seguridad (HoneyPot)',
@@ -198,12 +199,12 @@ class _BaseConfigModal(discord.ui.Modal):
         )
 
 
-class GeneralMinecraftModal(_BaseConfigModal):
+class GeneralModal(_BaseConfigModal):
     def __init__(self, banner_view: ConfigBannerView) -> None:
         super().__init__(
-            title='General & Minecraft',
+            title='General',
             banner_view=banner_view,
-            section_label='General & Minecraft',
+            section_label='General',
         )
         cfg = banner_view.cfg
         self.thumbnail_input = _text_input(
@@ -216,6 +217,24 @@ class GeneralMinecraftModal(_BaseConfigModal):
             placeholder='<:aeternum:123456789>',
             max_length=120,
         )
+        self.add_item(discord.ui.Label(text='Thumbnail URL', component=self.thumbnail_input))
+        self.add_item(discord.ui.Label(text='Server Emoji', component=self.emoji_input))
+
+    def build_updates(self) -> dict[str, Any]:
+        return {
+            'Thumbnail': self.thumbnail_input.value.strip(),
+            'Server Emoji': self.emoji_input.value.strip(),
+        }
+
+
+class MinecraftModal(_BaseConfigModal):
+    def __init__(self, banner_view: ConfigBannerView) -> None:
+        super().__init__(
+            title='Minecraft',
+            banner_view=banner_view,
+            section_label='Minecraft',
+        )
+        cfg = banner_view.cfg
         self.rcon_input = _text_input(
             default=cfg.rcon_password,
             placeholder='Contraseña RCON',
@@ -232,9 +251,6 @@ class GeneralMinecraftModal(_BaseConfigModal):
             placeholder='Jugador operador de WorldTrimmer',
             max_length=64,
         )
-
-        self.add_item(discord.ui.Label(text='Thumbnail URL', component=self.thumbnail_input))
-        self.add_item(discord.ui.Label(text='Server Emoji', component=self.emoji_input))
         self.add_item(discord.ui.Label(text='RCON Password', component=self.rcon_input))
         self.add_item(
             discord.ui.Label(
@@ -247,8 +263,6 @@ class GeneralMinecraftModal(_BaseConfigModal):
 
     def build_updates(self) -> dict[str, Any]:
         return {
-            'Thumbnail': self.thumbnail_input.value.strip(),
-            'Server Emoji': self.emoji_input.value.strip(),
             'RCON Password': self.rcon_input.value.strip(),
             'Admins': [line.strip() for line in self.admins_input.value.splitlines() if line.strip()],
             'WorldTrimmer': {'Operator': self.operator_input.value.strip()},
@@ -280,7 +294,13 @@ class GitHubModal(_BaseConfigModal):
         )
         self.add_item(discord.ui.Label(text='Repo (owner/repo)', component=self.repo_input))
         self.add_item(discord.ui.Label(text='Branch', component=self.branch_input))
-        self.add_item(discord.ui.Label(text='Token (PAT)', component=self.token_input))
+        self.add_item(
+            discord.ui.Label(
+                text='Token (PAT)',
+                description='Opcional: solo necesario para repositorios privados.',
+                component=self.token_input,
+            )
+        )
 
     def build_updates(self) -> dict[str, Any]:
         repo = self.repo_input.value.strip()
@@ -778,18 +798,22 @@ class ConfigBannerView(discord.ui.View):
         cfg = self.cfg
         if self.page == 0:
             gh = cfg.github
+            token_txt = f'||{gh.token}||' if gh.token.strip() else '*Opcional (solo repos privados)*'
             return (
                 f'- **Thumbnail:** {_fmt_str(cfg.thumbnail)}\n'
-                f'- **Server Emoji:** {_fmt_str(cfg.server_emoji)}\n'
-                f'- **RCON Password:** {_fmt_str(cfg.rcon_password, spoiler=True)}\n'
-                f'- **Admins:** {_fmt_list(cfg.admins)}\n'
-                f'- **WorldTrimmer Operator:** {_fmt_str(cfg.world_trimmer.operator)}\n\n'
+                f'- **Server Emoji:** {_fmt_str(cfg.server_emoji)}\n\n'
                 f'**GitHub Updater**\n'
                 f'- **Repo:** {_fmt_str(gh.repo)}\n'
                 f'- **Branch:** {_fmt_str(gh.branch)}\n'
-                f'- **Token:** {_fmt_str(gh.token, spoiler=True)}'
+                f'- **Token:** {token_txt}'
             )
         if self.page == 1:
+            return (
+                f'- **RCON Password:** {_fmt_str(cfg.rcon_password, spoiler=True)}\n'
+                f'- **Admins:** {_fmt_list(cfg.admins)}\n'
+                f'- **WorldTrimmer Operator:** {_fmt_str(cfg.world_trimmer.operator)}'
+            )
+        if self.page == 2:
             processes = _available_processes(self.client, cfg)
             plugin_lines = [
                 f'  - `{srv}`: {_fmt_list(cfg.plugins.get(srv, ()))}'
@@ -801,7 +825,7 @@ class ConfigBannerView(discord.ui.View):
                 f'- **Guide Targets:** {_fmt_list(cfg.guide_targets)}\n'
                 f'- **Plugins por servidor:**\n{plugins_text}'
             )
-        if self.page == 2:
+        if self.page == 3:
             return (
                 f'**ChatBridge**\n'
                 f'- **Channel ID:** {_fmt_channel(cfg.chatbridge.channel_id)}\n'
@@ -810,7 +834,7 @@ class ConfigBannerView(discord.ui.View):
                 f'- **Channel ID:** {_fmt_channel(cfg.tts.channel_id)}\n'
                 f'- **Webhook Name:** {_fmt_str(cfg.tts.webhook_name)}'
             )
-        if self.page == 3:
+        if self.page == 4:
             hp = cfg.honeypot
             color_txt = f'`0x{hp.accent_color:06X}`' if hp.accent_color > 0 else '*Sin configurar*'
             del_txt = f'`{hp.delete_message_hours}h`' if hp.delete_message_hours > 0 else '`0h`'
@@ -820,7 +844,7 @@ class ConfigBannerView(discord.ui.View):
                 f'- **Ban Reason:** {_fmt_str(hp.ban_reason)}\n'
                 f'- **Delete Message Hours:** {del_txt}'
             )
-        if self.page == 4:
+        if self.page == 5:
             di = cfg.discord_info
             return (
                 f'**InterviewersInfo & Tickets**\n'
@@ -849,9 +873,9 @@ class ConfigBannerView(discord.ui.View):
         if self.page == 0:
             options = [
                 discord.SelectOption(
-                    label='General & Minecraft',
+                    label='General',
                     value='general',
-                    description='Thumbnail, Emoji, RCON, Admins y WorldTrimmer',
+                    description='Thumbnail y Server Emoji',
                 ),
                 discord.SelectOption(
                     label='GitHub Updater',
@@ -860,12 +884,24 @@ class ConfigBannerView(discord.ui.View):
                 ),
             ]
             factories: dict[str, Callable[[ConfigBannerView], discord.ui.Modal]] = {
-                'general': GeneralMinecraftModal,
+                'general': GeneralModal,
                 'github': GitHubModal,
             }
             return _EditSectionSelect(options, factories)
 
         if self.page == 1:
+            return _EditSectionSelect(
+                [
+                    discord.SelectOption(
+                        label='Minecraft',
+                        value='minecraft',
+                        description='RCON Password, Admins y WorldTrimmer Operator',
+                    )
+                ],
+                {'minecraft': MinecraftModal},
+            )
+
+        if self.page == 2:
             options = [
                 discord.SelectOption(
                     label='Servers & Guide Targets',
@@ -888,7 +924,7 @@ class ConfigBannerView(discord.ui.View):
                     factories[key] = _make_plugins_modal_factory(server_name)
             return _EditSectionSelect(options, factories)
 
-        if self.page == 2:
+        if self.page == 3:
             return _EditSectionSelect(
                 [
                     discord.SelectOption(
@@ -900,19 +936,19 @@ class ConfigBannerView(discord.ui.View):
                 {'comm': CommunicationModal},
             )
 
-        if self.page == 3:
+        if self.page == 4:
             return _EditSectionSelect(
                 [
                     discord.SelectOption(
                         label='HoneyPot',
                         value='honeypot',
-                        description='Canal, color, hilo, motivo y borrado',
+                        description='Canal, color, motivo y borrado',
                     )
                 ],
                 {'honeypot': HoneyPotModal},
             )
 
-        if self.page == 4:
+        if self.page == 5:
             return _EditSectionSelect(
                 [
                     discord.SelectOption(
