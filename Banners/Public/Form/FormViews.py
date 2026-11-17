@@ -21,14 +21,14 @@ def _missing_form_text(lang: str) -> str:
 def _append_answers_embed(
     base_embed: discord.Embed,
     section_name: str,
-    questions: list[discord.ui.TextInput[Any]],
+    questions: list[tuple[str, discord.ui.TextInput[Any]]],
 ) -> discord.Embed:
     new_embed = discord.Embed.from_dict(base_embed.to_dict())
     new_embed.add_field(inline=False, name=section_name, value='')
-    for question in questions:
+    for label_text, question in questions:
         new_embed.add_field(
             inline=False,
-            name=question.label or 'Question',
+            name=label_text or 'Question',
             value=question.value.strip()[:1024] or '-',
         )
     return new_embed
@@ -37,7 +37,7 @@ def _append_answers_embed(
 async def _append_answers_to_logged_form(
     interaction: discord.Interaction,
     section_name: str,
-    questions: list[discord.ui.TextInput[Any]],
+    questions: list[tuple[str, discord.ui.TextInput[Any]]],
     success_text: str,
     lang: str,
 ) -> None:
@@ -66,7 +66,7 @@ async def _append_answers_to_logged_form(
 
 async def _submit_personal_form(
     interaction: discord.Interaction,
-    questions: list[discord.ui.TextInput[Any]],
+    questions: list[tuple[str, discord.ui.TextInput[Any]]],
     *,
     lang: str,
 ) -> None:
@@ -88,10 +88,10 @@ async def _submit_personal_form(
         .add_field(inline=True, name='Ticket', value=ticket_mention)
         .set_thumbnail(url=interaction.user.display_avatar.url)
     )
-    for question in questions:
+    for label_text, question in questions:
         form_embed.add_field(
             inline=False,
-            name=question.label or 'Question',
+            name=label_text or 'Question',
             value=question.value.strip()[:1024] or '-',
         )
 
@@ -227,209 +227,196 @@ class FormBannerView(discord.ui.View):
             await interaction.response.send_modal(modal)
 
 
-class EsFormBuilderModal(discord.ui.Modal, title='Preguntas de Decorador'):
-    question_1: discord.ui.TextInput[EsFormBuilderModal] = discord.ui.TextInput(
-        label='Describe tu estilo de decoracion', style=discord.TextStyle.paragraph
-    )
-    question_2: discord.ui.TextInput[EsFormBuilderModal] = discord.ui.TextInput(
-        label='Explica como planificas una decoracion', style=discord.TextStyle.paragraph
-    )
-    question_3: discord.ui.TextInput[EsFormBuilderModal] = discord.ui.TextInput(
-        label='Cuentanos como aprendiste a decorar', style=discord.TextStyle.paragraph
-    )
-    question_4: discord.ui.TextInput[EsFormBuilderModal] = discord.ui.TextInput(
-        label='Usas WorldEdit? Para que exactamente?', style=discord.TextStyle.paragraph
-    )
-    question_5: discord.ui.TextInput[EsFormBuilderModal] = discord.ui.TextInput(
-        label='Usas plugins de builders? Cuales?', style=discord.TextStyle.paragraph
-    )
+class _FormQuestionsModal(discord.ui.Modal):
+    def __init__(
+        self,
+        *,
+        title: str,
+        prompts: tuple[tuple[str, discord.TextStyle], ...],
+    ) -> None:
+        super().__init__(title=title)
+        self.questions: list[tuple[str, discord.ui.TextInput[Any]]] = []
+        for label_text, style in prompts:
+            item: discord.ui.TextInput[Any] = discord.ui.TextInput(style=style)
+            self.questions.append((label_text, item))
+            self.add_item(discord.ui.Label(text=label_text, component=item))
+
+
+class EsFormBuilderModal(_FormQuestionsModal):
+    def __init__(self) -> None:
+        super().__init__(
+            title='Preguntas de Decorador',
+            prompts=(
+                ('Describe tu estilo de decoracion', discord.TextStyle.paragraph),
+                ('Explica como planificas una decoracion', discord.TextStyle.paragraph),
+                ('Cuentanos como aprendiste a decorar', discord.TextStyle.paragraph),
+                ('Usas WorldEdit? Para que exactamente?', discord.TextStyle.paragraph),
+                ('Usas plugins de builders? Cuales?', discord.TextStyle.paragraph),
+            ),
+        )
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await _append_answers_to_logged_form(
             interaction,
             '> Preguntas de Builder',
-            [self.question_1, self.question_2, self.question_3, self.question_4, self.question_5],
+            self.questions,
             '✔ Las respuestas fueron agregadas a tu formulario.\nNo olvides enviar tus evidencias.',
             'es',
         )
 
 
-class EnFormBuilderModal(discord.ui.Modal, title='Builder Questions'):
-    question_1: discord.ui.TextInput[EnFormBuilderModal] = discord.ui.TextInput(
-        label='Describe your decoration style', style=discord.TextStyle.paragraph
-    )
-    question_2: discord.ui.TextInput[EnFormBuilderModal] = discord.ui.TextInput(
-        label='Explain how you plan a decoration', style=discord.TextStyle.paragraph
-    )
-    question_3: discord.ui.TextInput[EnFormBuilderModal] = discord.ui.TextInput(
-        label='Tell us how you learned decoration', style=discord.TextStyle.paragraph
-    )
-    question_4: discord.ui.TextInput[EnFormBuilderModal] = discord.ui.TextInput(
-        label='Do you use WorldEdit? What for exactly?', style=discord.TextStyle.paragraph
-    )
-    question_5: discord.ui.TextInput[EnFormBuilderModal] = discord.ui.TextInput(
-        label='Do you use builder plugins? Which ones?', style=discord.TextStyle.paragraph
-    )
+class EnFormBuilderModal(_FormQuestionsModal):
+    def __init__(self) -> None:
+        super().__init__(
+            title='Builder Questions',
+            prompts=(
+                ('Describe your decoration style', discord.TextStyle.paragraph),
+                ('Explain how you plan a decoration', discord.TextStyle.paragraph),
+                ('Tell us how you learned decoration', discord.TextStyle.paragraph),
+                ('Do you use WorldEdit? What for exactly?', discord.TextStyle.paragraph),
+                ('Do you use builder plugins? Which ones?', discord.TextStyle.paragraph),
+            ),
+        )
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await _append_answers_to_logged_form(
             interaction,
             '> Builder Questions',
-            [self.question_1, self.question_2, self.question_3, self.question_4, self.question_5],
+            self.questions,
             '✔ Answers added to your form.\nDo not forget to send your evidence.',
             'en',
         )
 
 
-class EsFormGrinderModal(discord.ui.Modal, title='Preguntas de Grinder'):
-    question_1: discord.ui.TextInput[EsFormGrinderModal] = discord.ui.TextInput(
-        label='Cual es el rango de efecto de un beacon?'
-    )
-    question_2: discord.ui.TextInput[EsFormGrinderModal] = discord.ui.TextInput(
-        label='Utilizas Litematica, MiniHud...? Para que?', style=discord.TextStyle.paragraph
-    )
-    question_3: discord.ui.TextInput[EsFormGrinderModal] = discord.ui.TextInput(
-        label='Usas Item Shadowing? Explica como hacerlo', style=discord.TextStyle.paragraph
-    )
-    question_4: discord.ui.TextInput[EsFormGrinderModal] = discord.ui.TextInput(
-        label='Dinos distintas formas de hacer un perimetro', style=discord.TextStyle.paragraph
-    )
-    question_5: discord.ui.TextInput[EsFormGrinderModal] = discord.ui.TextInput(
-        label='Como picas en un perimetro? Explicate', style=discord.TextStyle.paragraph
-    )
+class EsFormGrinderModal(_FormQuestionsModal):
+    def __init__(self) -> None:
+        super().__init__(
+            title='Preguntas de Grinder',
+            prompts=(
+                ('Cual es el rango de efecto de un beacon?', discord.TextStyle.short),
+                ('Utilizas Litematica, MiniHud...? Para que?', discord.TextStyle.paragraph),
+                ('Usas Item Shadowing? Explica como hacerlo', discord.TextStyle.paragraph),
+                ('Dinos distintas formas de hacer un perimetro', discord.TextStyle.paragraph),
+                ('Como picas en un perimetro? Explicate', discord.TextStyle.paragraph),
+            ),
+        )
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await _append_answers_to_logged_form(
             interaction,
             '> Preguntas de Grinder',
-            [self.question_1, self.question_2, self.question_3, self.question_4, self.question_5],
+            self.questions,
             '✔ Las respuestas fueron agregadas a tu formulario.\nNo olvides enviar tus evidencias.',
             'es',
         )
 
 
-class EnFormGrinderModal(discord.ui.Modal, title='Grinder Questions'):
-    question_1: discord.ui.TextInput[EnFormGrinderModal] = discord.ui.TextInput(
-        label='What is the effect range of a beacon?'
-    )
-    question_2: discord.ui.TextInput[EnFormGrinderModal] = discord.ui.TextInput(
-        label='Do you use Litematica, MiniHud...? What for?', style=discord.TextStyle.paragraph
-    )
-    question_3: discord.ui.TextInput[EnFormGrinderModal] = discord.ui.TextInput(
-        label='Do you use Item Shadowing? Explain it', style=discord.TextStyle.paragraph
-    )
-    question_4: discord.ui.TextInput[EnFormGrinderModal] = discord.ui.TextInput(
-        label='Tell us different ways to make a perimeter', style=discord.TextStyle.paragraph
-    )
-    question_5: discord.ui.TextInput[EnFormGrinderModal] = discord.ui.TextInput(
-        label='How do you mine in a perimeter? Explain it', style=discord.TextStyle.paragraph
-    )
+class EnFormGrinderModal(_FormQuestionsModal):
+    def __init__(self) -> None:
+        super().__init__(
+            title='Grinder Questions',
+            prompts=(
+                ('What is the effect range of a beacon?', discord.TextStyle.short),
+                ('Do you use Litematica, MiniHud...? What for?', discord.TextStyle.paragraph),
+                ('Do you use Item Shadowing? Explain it', discord.TextStyle.paragraph),
+                ('Tell us different ways to make a perimeter', discord.TextStyle.paragraph),
+                ('How do you mine in a perimeter? Explain it', discord.TextStyle.paragraph),
+            ),
+        )
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await _append_answers_to_logged_form(
             interaction,
             '> Grinder Questions',
-            [self.question_1, self.question_2, self.question_3, self.question_4, self.question_5],
+            self.questions,
             '✔ Answers added to your form.\nDo not forget to send your evidence.',
             'en',
         )
 
 
-class EsFormRedstonerModal(discord.ui.Modal, title='Preguntas de Redstoner'):
-    question_1: discord.ui.TextInput[EsFormRedstonerModal] = discord.ui.TextInput(
-        label='Para que se bloquean las tolvas?', style=discord.TextStyle.paragraph
-    )
-    question_2: discord.ui.TextInput[EsFormRedstonerModal] = discord.ui.TextInput(
-        label='Explica la quasiconectividad', style=discord.TextStyle.paragraph
-    )
-    question_3: discord.ui.TextInput[EsFormRedstonerModal] = discord.ui.TextInput(
-        label='Explica las funcionalidades de un comparador', style=discord.TextStyle.paragraph
-    )
-    question_4: discord.ui.TextInput[EsFormRedstonerModal] = discord.ui.TextInput(
-        label='Que es un cero tick?', style=discord.TextStyle.paragraph
-    )
-    question_5: discord.ui.TextInput[EsFormRedstonerModal] = discord.ui.TextInput(
-        label='Menciona y explica las 5 fases del tick', style=discord.TextStyle.paragraph
-    )
+class EsFormRedstonerModal(_FormQuestionsModal):
+    def __init__(self) -> None:
+        super().__init__(
+            title='Preguntas de Redstoner',
+            prompts=(
+                ('Para que se bloquean las tolvas?', discord.TextStyle.paragraph),
+                ('Explica la quasiconectividad', discord.TextStyle.paragraph),
+                ('Explica las funcionalidades de un comparador', discord.TextStyle.paragraph),
+                ('Que es un cero tick?', discord.TextStyle.paragraph),
+                ('Menciona y explica las 5 fases del tick', discord.TextStyle.paragraph),
+            ),
+        )
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await _append_answers_to_logged_form(
             interaction,
             '> Preguntas de Redstoner',
-            [self.question_1, self.question_2, self.question_3, self.question_4, self.question_5],
+            self.questions,
             '✔ Las respuestas fueron agregadas a tu formulario.\nNo olvides enviar tus evidencias.',
             'es',
         )
 
 
-class EnFormRedstonerModal(discord.ui.Modal, title='Redstoner Questions'):
-    question_1: discord.ui.TextInput[EnFormRedstonerModal] = discord.ui.TextInput(
-        label='What are locked hoppers used for?', style=discord.TextStyle.paragraph
-    )
-    question_2: discord.ui.TextInput[EnFormRedstonerModal] = discord.ui.TextInput(
-        label='Explain quasi-connectivity', style=discord.TextStyle.paragraph
-    )
-    question_3: discord.ui.TextInput[EnFormRedstonerModal] = discord.ui.TextInput(
-        label='Explain the functionality of a comparator', style=discord.TextStyle.paragraph
-    )
-    question_4: discord.ui.TextInput[EnFormRedstonerModal] = discord.ui.TextInput(
-        label='What is a zero tick?', style=discord.TextStyle.paragraph
-    )
-    question_5: discord.ui.TextInput[EnFormRedstonerModal] = discord.ui.TextInput(
-        label='Mention and explain the 5 phases of the tick', style=discord.TextStyle.paragraph
-    )
+class EnFormRedstonerModal(_FormQuestionsModal):
+    def __init__(self) -> None:
+        super().__init__(
+            title='Redstoner Questions',
+            prompts=(
+                ('What are locked hoppers used for?', discord.TextStyle.paragraph),
+                ('Explain quasi-connectivity', discord.TextStyle.paragraph),
+                ('Explain the functionality of a comparator', discord.TextStyle.paragraph),
+                ('What is a zero tick?', discord.TextStyle.paragraph),
+                ('Mention and explain the 5 phases of the tick', discord.TextStyle.paragraph),
+            ),
+        )
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await _append_answers_to_logged_form(
             interaction,
             '> Redstoner Questions',
-            [self.question_1, self.question_2, self.question_3, self.question_4, self.question_5],
+            self.questions,
             '✔ Answers added to your form.\nDo not forget to send your evidence.',
             'en',
         )
 
 
-class EsFormModal(discord.ui.Modal, title='Formulario de ingreso'):
-    question_1: discord.ui.TextInput[EsFormModal] = discord.ui.TextInput(label='Edad, pais y nick de MC')
-    question_2: discord.ui.TextInput[EsFormModal] = discord.ui.TextInput(
-        label='Por que deseas aplicar a Aeternum?', style=discord.TextStyle.paragraph
-    )
-    question_3: discord.ui.TextInput[EsFormModal] = discord.ui.TextInput(
-        label='Cuanto tiempo llevas jugando MC tecnico?', style=discord.TextStyle.paragraph
-    )
-    question_4: discord.ui.TextInput[EsFormModal] = discord.ui.TextInput(
-        label='Has estado en algun servidor tecnico?', style=discord.TextStyle.paragraph
-    )
-    question_5: discord.ui.TextInput[EsFormModal] = discord.ui.TextInput(
-        label='Que crees que puedes aportar a Aeternum?', style=discord.TextStyle.paragraph
-    )
+class EsFormModal(_FormQuestionsModal):
+    def __init__(self) -> None:
+        super().__init__(
+            title='Formulario de ingreso',
+            prompts=(
+                ('Edad, pais y nick de MC', discord.TextStyle.short),
+                ('Por que deseas aplicar a Aeternum?', discord.TextStyle.paragraph),
+                ('Cuanto tiempo llevas jugando MC tecnico?', discord.TextStyle.paragraph),
+                ('Has estado en algun servidor tecnico?', discord.TextStyle.paragraph),
+                ('Que crees que puedes aportar a Aeternum?', discord.TextStyle.paragraph),
+            ),
+        )
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await _submit_personal_form(
             interaction,
-            [self.question_1, self.question_2, self.question_3, self.question_4, self.question_5],
+            self.questions,
             lang='es',
         )
 
 
-class EnFormModal(discord.ui.Modal, title='Application Form'):
-    question_1: discord.ui.TextInput[EnFormModal] = discord.ui.TextInput(label='Age, country and MC nickname')
-    question_2: discord.ui.TextInput[EnFormModal] = discord.ui.TextInput(
-        label='Why do you want to apply to Aeternum?', style=discord.TextStyle.paragraph
-    )
-    question_3: discord.ui.TextInput[EnFormModal] = discord.ui.TextInput(
-        label='How long have you been playing technical MC?', style=discord.TextStyle.paragraph
-    )
-    question_4: discord.ui.TextInput[EnFormModal] = discord.ui.TextInput(
-        label='Have you been in any technical server?', style=discord.TextStyle.paragraph
-    )
-    question_5: discord.ui.TextInput[EnFormModal] = discord.ui.TextInput(
-        label='How can you contribute to Aeternum?', style=discord.TextStyle.paragraph
-    )
+class EnFormModal(_FormQuestionsModal):
+    def __init__(self) -> None:
+        super().__init__(
+            title='Application Form',
+            prompts=(
+                ('Age, country and MC nickname', discord.TextStyle.short),
+                ('Why do you want to apply to Aeternum?', discord.TextStyle.paragraph),
+                ('How long have you been playing technical MC?', discord.TextStyle.paragraph),
+                ('Have you been in any technical server?', discord.TextStyle.paragraph),
+                ('How can you contribute to Aeternum?', discord.TextStyle.paragraph),
+            ),
+        )
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await _submit_personal_form(
             interaction,
-            [self.question_1, self.question_2, self.question_3, self.question_4, self.question_5],
+            self.questions,
             lang='en',
         )
