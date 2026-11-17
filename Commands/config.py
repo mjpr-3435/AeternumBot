@@ -184,14 +184,15 @@ class _BaseConfigModal(discord.ui.Modal):
             return
 
         self.banner_view.cfg = new_cfg
-        self.banner_view.status_notice = (
-            f'✔ **{self.section_label}** guardado en `config.yml`. '
-            'Ejecuta `!!adreload` cuando termines para aplicar los cambios.'
-        )
         self.banner_view.rebuild()
         await interaction.response.edit_message(
             embed=self.banner_view.build_embed(),
             view=self.banner_view,
+        )
+        await interaction.followup.send(
+            f'✔ **{self.section_label}** guardado en `config.yml`. '
+            'Ejecuta `!!adreload` cuando termines para aplicar los cambios.',
+            ephemeral=True,
         )
 
 
@@ -775,7 +776,6 @@ class ConfigBannerView(discord.ui.View):
         self.client = client
         self.cfg = cfg
         self.page = 0
-        self.status_notice: str | None = None
         self.rebuild()
 
     def _page_body(self) -> str:
@@ -968,9 +968,7 @@ class ConfigBannerView(discord.ui.View):
             description=self._page_body(),
             colour=_EMBED_COLOUR,
         )
-        page_label = f'Página {self.page + 1}/{len(_PAGE_TITLES)}'
-        footer_text = f'{page_label} · {self.status_notice}' if self.status_notice else page_label
-        embed.set_footer(text=footer_text)
+        embed.set_footer(text=f'Página {self.page + 1}/{len(_PAGE_TITLES)}')
         return embed
 
     def rebuild(self) -> None:
