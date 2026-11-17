@@ -811,7 +811,7 @@ class _PrevPageButton(discord.ui.Button['ConfigBannerView']):
             label='<',
             style=discord.ButtonStyle.secondary,
             disabled=disabled,
-            row=1,
+            row=2,
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
@@ -831,13 +831,42 @@ class _NextPageButton(discord.ui.Button['ConfigBannerView']):
             label='>',
             style=discord.ButtonStyle.secondary,
             disabled=disabled,
-            row=1,
+            row=2,
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
         assert self.view is not None
         view = self.view
         view.page = min(len(_PAGE_TITLES) - 1, view.page + 1)
+        view.rebuild()
+        await interaction.response.edit_message(
+            embed=view.build_embed(),
+            view=view,
+        )
+
+
+class _PageSelect(discord.ui.Select['ConfigBannerView']):
+    def __init__(self, current_page: int) -> None:
+        options = [
+            discord.SelectOption(
+                label=f'{idx + 1}. {title}',
+                value=str(idx),
+                default=idx == current_page,
+            )
+            for idx, title in enumerate(_PAGE_TITLES)
+        ]
+        super().__init__(
+            placeholder='Ir a la página...',
+            min_values=1,
+            max_values=1,
+            options=options,
+            row=0,
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        assert self.view is not None
+        view = self.view
+        view.page = int(self.values[0])
         view.rebuild()
         await interaction.response.edit_message(
             embed=view.build_embed(),
@@ -865,7 +894,7 @@ class _EditSectionSelect(discord.ui.Select['ConfigBannerView']):
             min_values=1,
             max_values=1,
             options=options,
-            row=0,
+            row=1,
         )
         self.modal_factories = modal_factories
 
@@ -1117,6 +1146,7 @@ class ConfigBannerView(discord.ui.View):
 
     def rebuild(self) -> None:
         self.clear_items()
+        self.add_item(_PageSelect(self.page))
         self.add_item(self._page_select())
         self.add_item(_PrevPageButton(disabled=self.page == 0))
         self.add_item(_NextPageButton(disabled=self.page == len(_PAGE_TITLES) - 1))
