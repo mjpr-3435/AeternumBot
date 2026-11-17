@@ -463,31 +463,25 @@ class HoneyPotModal(_BaseConfigModal):
             placeholder='0xF2B632',
             max_length=16,
         )
-        self.thread_input = _text_input(
-            default=hp.log_thread_name,
-            placeholder='HoneyPot Log',
-            max_length=100,
-        )
         self.reason_input = _text_input(
             default=hp.ban_reason,
             placeholder='HoneyPot triggered: message sent in restricted security channel.',
             max_length=300,
         )
-        self.delete_seconds_input = _text_input(
-            default=str(hp.delete_message_seconds) if hp.delete_message_seconds > 0 else '',
-            placeholder='86400',
-            max_length=10,
+        self.delete_hours_input = _text_input(
+            default=str(hp.delete_message_hours) if hp.delete_message_hours > 0 else '',
+            placeholder='24',
+            max_length=4,
         )
 
         self.add_item(discord.ui.Label(text='Canal HoneyPot', component=self.channel_select))
         self.add_item(discord.ui.Label(text='Accent Color (hex)', component=self.accent_input))
-        self.add_item(discord.ui.Label(text='Log Thread Name', component=self.thread_input))
         self.add_item(discord.ui.Label(text='Ban Reason', component=self.reason_input))
         self.add_item(
             discord.ui.Label(
-                text='Delete Message Seconds',
-                description='Entre 0 y 604800 segundos.',
-                component=self.delete_seconds_input,
+                text='Delete Message Hours',
+                description='Entre 0 y 168 horas (máx. 7 días).',
+                component=self.delete_hours_input,
             )
         )
 
@@ -496,11 +490,10 @@ class HoneyPotModal(_BaseConfigModal):
             'HoneyPot': {
                 'Channel ID': _selected_id(self.channel_select.values),
                 'Accent Color': _parse_hex_or_int(self.accent_input.value),
-                'Log Thread Name': self.thread_input.value.strip(),
                 'Ban Reason': self.reason_input.value.strip(),
-                'Delete Message Seconds': _parse_non_negative_int(
-                    self.delete_seconds_input.value,
-                    maximum=604800,
+                'Delete Message Hours': _parse_non_negative_int(
+                    self.delete_hours_input.value,
+                    maximum=168,
                 ),
             }
         }
@@ -824,13 +817,12 @@ class ConfigBannerView(discord.ui.View):
         if self.page == 3:
             hp = cfg.honeypot
             color_txt = f'`0x{hp.accent_color:06X}`' if hp.accent_color > 0 else '*Sin configurar*'
-            del_txt = f'`{hp.delete_message_seconds}s`' if hp.delete_message_seconds > 0 else '`0s`'
+            del_txt = f'`{hp.delete_message_hours}h`' if hp.delete_message_hours > 0 else '`0h`'
             return (
                 f'- **Channel ID:** {_fmt_channel(hp.channel_id)}\n'
                 f'- **Accent Color:** {color_txt}\n'
-                f'- **Log Thread Name:** {_fmt_str(hp.log_thread_name)}\n'
                 f'- **Ban Reason:** {_fmt_str(hp.ban_reason)}\n'
-                f'- **Delete Message Seconds:** {del_txt}'
+                f'- **Delete Message Hours:** {del_txt}'
             )
         if self.page == 4:
             di = cfg.discord_info

@@ -11,9 +11,8 @@ from ruamel.yaml.comments import CommentedMap
 from ruamel.yaml.error import YAMLError
 
 if TYPE_CHECKING:
-    from dismanager.classes import DisManagerClient
-
     from Classes.AeServer import AeServer
+    from dismanager.classes import DisManagerClient
 
 
 class AeternumConfigError(Exception):
@@ -65,9 +64,8 @@ class HoneyPotConfig:
 
     channel_id: int
     accent_color: int
-    log_thread_name: str
     ban_reason: str
-    delete_message_seconds: int
+    delete_message_hours: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -296,9 +294,8 @@ def _parse_honeypot(data: Mapping[str, Any]) -> HoneyPotConfig:
     return HoneyPotConfig(
         channel_id=_require_int(hp, 'Channel ID'),
         accent_color=_require_int(hp, 'Accent Color'),
-        log_thread_name=_require_str(hp, 'Log Thread Name'),
         ban_reason=_require_str(hp, 'Ban Reason'),
-        delete_message_seconds=_require_int(hp, 'Delete Message Seconds'),
+        delete_message_hours=_require_int(hp, 'Delete Message Hours'),
     )
 
 
@@ -413,9 +410,8 @@ TTS:
 HoneyPot:
   Channel ID: 0
   Accent Color: 0
-  Log Thread Name: ''
   Ban Reason: ''
-  Delete Message Seconds: 0
+  Delete Message Hours: 0
 
 InterviewersInfo:
   Channel ID: 0

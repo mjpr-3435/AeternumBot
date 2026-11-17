@@ -34,7 +34,7 @@ class HoneyPotBehaviour(commands.Cog):
         try:
             await message.author.ban(
                 reason=ae_config.honeypot.ban_reason,
-                delete_message_seconds=ae_config.honeypot.delete_message_seconds,
+                delete_message_seconds=ae_config.honeypot.delete_message_hours * 3600,
             )
         except discord.HTTPException:
             return
@@ -53,9 +53,8 @@ class HoneyPotBehaviour(commands.Cog):
         channel = resolve_honeypot_channel(self.client)
         if not isinstance(channel, discord.TextChannel):
             return
-        ae_config = get_ae_config(self.client)
         log_thread = await get_or_create_thread(
-            ae_config.honeypot.log_thread_name,
+            'HoneyPot Log',
             channel,
             public=True,
         )

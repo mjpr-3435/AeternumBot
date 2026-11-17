@@ -29,7 +29,7 @@ class _EnLanguageButton(discord.ui.Button['HoneyPotView']):
         client = cast(DisManagerClient, interaction.client)
         channel = resolve_honeypot_channel(client)
         hp_cfg = get_ae_config(client).honeypot
-        log_thread = await get_or_create_thread(hp_cfg.log_thread_name, channel, public=True)
+        log_thread = await get_or_create_thread('HoneyPot Log', channel, public=True)
         await interaction.response.send_message(
             view=HoneyPotEnView(
                 accent_color=hp_cfg.accent_color,
@@ -101,7 +101,7 @@ async def build_honeypot_view(client: DisManagerClient) -> HoneyPotView:
     """Build the Components v2 ``HoneyPotView`` from ``client`` configuration and stats."""
     hp_cfg = get_ae_config(client).honeypot
     channel = resolve_honeypot_channel(client)
-    log_thread = await get_or_create_thread(hp_cfg.log_thread_name, channel, public=True)
+    log_thread = await get_or_create_thread('HoneyPot Log', channel, public=True)
     return HoneyPotView(
         accent_color=hp_cfg.accent_color,
         log_thread_id=log_thread.id,
