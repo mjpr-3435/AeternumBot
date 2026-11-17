@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 import discord
+from Classes.config import DiscordInfoConfig
 
 _EMBED_COLOUR = 0x2F3136
 
@@ -253,90 +254,36 @@ def banner_es_embed(
     )
 
 
-def hardware_info_en_embed() -> discord.Embed:
-    """Build the English server hardware/mods embed."""
-    return (
-        discord.Embed(title='Aeternum Server', colour=_EMBED_COLOUR)
-        .add_field(
-            name='> Host Information',
-            inline=False,
-            value=(
-                '```asciidoc\n'
-                'Type:: Dedicated Server\n'
-                'Location:: Beauharnois, Canada\n'
-                'Processor:: AMD Ryzen 7 9700X\n'
-                'Servers:: SMP/CMP/Mirror\n'
-                'Storage:: 2 x 512GB TB NVMe SSD\n'
-                'RAM:: 64 GB DDR5 5200MHz'
-                '```'
-            ),
-        )
-        .add_field(
-            name='> Server Rules',
-            inline=True,
-            value=(
-                '- AccurateBlockPlacement\n'
-                '- InstamineDeepslate\n'
-                '- CombineXPOrbs\n'
-                '- MissingTools\n'
-                '- OptimizedTNT\n'
-                '- ShadowItemsFix'
-            ),
-        )
-        .add_field(
-            name='> Server Mods',
-            inline=True,
-            value=(
-                '- Syncmatica\n'
-                '- EssentialCarefulBreak\n'
-                '- Starlight\n'
-                '- Lithium\n'
-                '- PCA-Protocol'
-            ),
-        )
+def _format_bullet_paragraph(raw: str) -> str:
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
+    if not lines:
+        return '*Sin configurar*'
+    return '\n'.join(line if line.startswith('- ') else f'- {line}' for line in lines)
+
+
+def hardware_info_embed(discord_cfg: DiscordInfoConfig) -> discord.Embed:
+    """Build the server hardware, Carpet rules, and mods embed from config."""
+    host_block = (
+        f'```asciidoc\n{discord_cfg.host_info.strip()}```'
+        if discord_cfg.host_info.strip()
+        else '*Sin configurar*'
     )
-
-
-def hardware_info_es_embed() -> discord.Embed:
-    """Build the Spanish server hardware/mods embed."""
     return (
         discord.Embed(title='Servidor de Aeternum', colour=_EMBED_COLOUR)
         .add_field(
             name='> Información sobre el host',
             inline=False,
-            value=(
-                '```asciidoc\n'
-                'Tipo:: Servidor Dedicado\n'
-                'Ubicación:: Beauharnois, Canadá\n'
-                'Procesador:: AMD Ryzen 7 9700X\n'
-                'Servidores:: SMP/CMP/Mirror\n'
-                'Almacenamiento:: 2 x 512GB TB NVMe SSD\n'
-                'RAM:: 64 GB DDR5 5200MHz'
-                '```'
-            ),
+            value=host_block,
         )
         .add_field(
             name='> Carpet Rules',
             inline=True,
-            value=(
-                '- AccurateBlockPlacement\n'
-                '- InstamineDeepslate\n'
-                '- CombineXPOrbs\n'
-                '- MissingTools\n'
-                '- OptimizedTNT\n'
-                '- ShadowItemsFix'
-            ),
+            value=_format_bullet_paragraph(discord_cfg.carpet_rules),
         )
         .add_field(
             name='> Server Mods',
             inline=True,
-            value=(
-                '- Syncmatica\n'
-                '- EssentialCarefulBreak\n'
-                '- Starlight\n'
-                '- Lithium\n'
-                '- PCA-Protocol'
-            ),
+            value=_format_bullet_paragraph(discord_cfg.server_mods),
         )
     )
 

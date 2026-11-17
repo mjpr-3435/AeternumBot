@@ -88,6 +88,9 @@ class DiscordInfoConfig:
     form_emoji_no: str
     tickets_category_id: int
     links: tuple[str, ...]
+    host_info: str
+    carpet_rules: str
+    server_mods: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -320,6 +323,9 @@ def _parse_discord_info(data: Mapping[str, Any]) -> DiscordInfoConfig:
         form_emoji_no=_require_str(info, 'Form Emoji No'),
         tickets_category_id=_require_int(info, 'Tickets Category ID'),
         links=_require_str_tuple(info, 'Links') if 'Links' in info else (),
+        host_info=_require_str(info, 'Host Info') if 'Host Info' in info else '',
+        carpet_rules=_require_str(info, 'Carpet Rules') if 'Carpet Rules' in info else '',
+        server_mods=_require_str(info, 'Server Mods') if 'Server Mods' in info else '',
     )
 
 
@@ -429,6 +435,9 @@ DiscordInfo:
   Form Emoji No: ''
   Tickets Category ID: 0
   Links: []
+  Host Info: ''
+  Carpet Rules: ''
+  Server Mods: ''
 
 Tickets:
   Interviewer Role ID: 0

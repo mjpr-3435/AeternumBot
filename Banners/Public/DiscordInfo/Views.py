@@ -11,8 +11,7 @@ from .Embeds import (
     apply_en_embed,
     apply_es_embed,
     banner_en_embed,
-    hardware_info_en_embed,
-    hardware_info_es_embed,
+    hardware_info_embed,
     rules_en_embed,
     rules_es_embed,
 )
@@ -36,7 +35,11 @@ class BannerEnViews(discord.ui.View):
         interaction: discord.Interaction,
         _button: discord.ui.Button[BannerEnViews],
     ) -> None:
-        await interaction.response.send_message(embed=hardware_info_en_embed(), ephemeral=True)
+        client = cast(DisManagerClient, interaction.client)
+        await interaction.response.send_message(
+            embed=hardware_info_embed(get_ae_config(client).discord_info),
+            ephemeral=True,
+        )
 
     @discord.ui.button(
         label='Apply',
@@ -121,7 +124,11 @@ class BannerEsViews(discord.ui.View):
         interaction: discord.Interaction,
         _button: discord.ui.Button[BannerEsViews],
     ) -> None:
-        await interaction.response.send_message(embed=hardware_info_es_embed(), ephemeral=True)
+        client = cast(DisManagerClient, interaction.client)
+        await interaction.response.send_message(
+            embed=hardware_info_embed(get_ae_config(client).discord_info),
+            ephemeral=True,
+        )
 
     @discord.ui.button(
         label='Apply',

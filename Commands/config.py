@@ -593,6 +593,58 @@ class DiscordInfoChannelsModal(_BaseConfigModal):
         }
 
 
+class DiscordInfoServerModal(_BaseConfigModal):
+    def __init__(self, banner_view: ConfigBannerView) -> None:
+        super().__init__(
+            title='DiscordInfo: Server Info',
+            banner_view=banner_view,
+            section_label='DiscordInfo (Server Info)',
+        )
+        di = banner_view.cfg.discord_info
+        self.host_input = _text_input(
+            default=di.host_info,
+            placeholder='Tipo:: Servidor Dedicado\nUbicación:: ...\nRAM:: 64 GB DDR5',
+            max_length=1000,
+            style=discord.TextStyle.paragraph,
+        )
+        self.rules_input = _text_input(
+            default=di.carpet_rules,
+            placeholder='AccurateBlockPlacement\nInstamineDeepslate\nCombineXPOrbs',
+            max_length=1000,
+            style=discord.TextStyle.paragraph,
+        )
+        self.mods_input = _text_input(
+            default=di.server_mods,
+            placeholder='Syncmatica\nEssentialCarefulBreak\nStarlight',
+            max_length=1000,
+            style=discord.TextStyle.paragraph,
+        )
+        self.add_item(discord.ui.Label(text='Host Info (asciidoc)', component=self.host_input))
+        self.add_item(
+            discord.ui.Label(
+                text='Carpet Rules',
+                description='Una regla por línea.',
+                component=self.rules_input,
+            )
+        )
+        self.add_item(
+            discord.ui.Label(
+                text='Server Mods',
+                description='Un mod por línea.',
+                component=self.mods_input,
+            )
+        )
+
+    def build_updates(self) -> dict[str, Any]:
+        return {
+            'DiscordInfo': {
+                'Host Info': self.host_input.value.strip(),
+                'Carpet Rules': self.rules_input.value.strip(),
+                'Server Mods': self.mods_input.value.strip(),
+            }
+        }
+
+
 class DiscordInfoLinksModal(_BaseConfigModal):
     def __init__(self, banner_view: ConfigBannerView) -> None:
         super().__init__(
@@ -890,6 +942,9 @@ class ConfigBannerView(discord.ui.View):
         if self.page == 5:
             di = cfg.discord_info
             links_txt = f'`{len(di.links)} link(s)`' if di.links else '*Sin configurar*'
+            host_txt = '`Configurado`' if di.host_info.strip() else '*Sin configurar*'
+            rules_txt = '`Configurado`' if di.carpet_rules.strip() else '*Sin configurar*'
+            mods_txt = '`Configurado`' if di.server_mods.strip() else '*Sin configurar*'
             return (
                 f'**InterviewersInfo & Tickets**\n'
                 f'- **InterviewersInfo Channel:** {_fmt_channel(cfg.interviewers_info.channel_id)}\n'
@@ -902,7 +957,8 @@ class ConfigBannerView(discord.ui.View):
                 f'- **Foundation Date:** {_fmt_str(di.foundation_date)}\n'
                 f'- **Invite:** {_fmt_str(di.invite)}\n'
                 f'- **Form Emoji Yes / No:** {_fmt_str(di.form_emoji_yes)} / {_fmt_str(di.form_emoji_no)}\n'
-                f'- **Links:** {links_txt}'
+                f'- **Links:** {links_txt}\n'
+                f'- **Server Info (Host / Carpet / Mods):** {host_txt} / {rules_txt} / {mods_txt}'
             )
         mi = cfg.members_info
         return (
@@ -1016,12 +1072,18 @@ class ConfigBannerView(discord.ui.View):
                         value='discord_links',
                         description='Links en formato nombre,emoji,url (uno por línea)',
                     ),
+                    discord.SelectOption(
+                        label='DiscordInfo: Server Info',
+                        value='discord_server',
+                        description='Host Info, Carpet Rules y Server Mods',
+                    ),
                 ],
                 {
                     'interviewers_tickets': InterviewersTicketsModal,
                     'discord_channels': DiscordInfoChannelsModal,
                     'discord_details': DiscordInfoDetailsModal,
                     'discord_links': DiscordInfoLinksModal,
+                    'discord_server': DiscordInfoServerModal,
                 },
             )
 
