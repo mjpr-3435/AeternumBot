@@ -33,5 +33,3 @@ async def public_extras(client: DisManagerClient) -> None:
         if extension in client.extensions:
             await client.unload_extension(extension)
         await client.load_extension(extension)
-
-    await client.tree.sync()

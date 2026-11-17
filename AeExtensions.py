@@ -155,9 +155,6 @@ class addon(BaseAddon):
                 if extension not in self.loaded_extensions:
                     self.loaded_extensions.append(extension)
 
-        if self.loaded_extensions:
-            await self.client.tree.sync()
-
     def _start_banners(self) -> None:
         banners_dir = self.addons_root / 'Banners'
         if not banners_dir.is_dir():
@@ -172,6 +169,15 @@ class addon(BaseAddon):
             self.persistent_tasks.append(asyncio.create_task(extras_fn(self.client)))
             self.persistent_tasks.append(asyncio.create_task(creator_fn(self.client)))
 
+    async def _sync_command_tree(self) -> None:
+        try:
+            await asyncio.sleep(0.5)
+            await self.client.tree.sync()
+        except asyncio.CancelledError:
+            return
+        except Exception as exc:
+            print(f'     -> No se pudo sincronizar el árbol de comandos: {exc}')
+
     # --- DisManager Hooks ---
 
     async def on_addons_load(self) -> None:
@@ -185,6 +191,7 @@ class addon(BaseAddon):
         self._manage_guides()
         await self._load_cogs()
         self._start_banners()
+        self.persistent_tasks.append(asyncio.create_task(self._sync_command_tree()))
 
         await self.client.change_presence(
             activity=discord.CustomActivity(name='Aeternum SMP'),

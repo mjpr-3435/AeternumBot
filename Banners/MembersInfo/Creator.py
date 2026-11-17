@@ -80,8 +80,6 @@ async def members_extras(client: DisManagerClient) -> None:
             await client.unload_extension(extension)
         await client.load_extension(extension)
 
-    await client.tree.sync()
-
 
 async def _banner_embed(client: DisManagerClient, channel: discord.TextChannel) -> discord.Embed:
     ae_cfg = get_ae_config(client)
