@@ -23,9 +23,8 @@ def form_banner_embed(client: DisManagerClient, lang: str = 'es') -> discord.Emb
             .add_field(
                 name='> Answer the questions',
                 value=(
-                    'As part of your application we will ask you to answer the questions shown in '
-                    'the dropdown below. Answer the personal questions first, then choose at least '
-                    'one role and answer the related questions.'
+                    'Press the `Complete Form` button below to fill in your details, choose the '
+                    'roles you are interested in, and tell us about your experience.'
                 ),
                 inline=False,
             )
@@ -56,9 +55,9 @@ def form_banner_embed(client: DisManagerClient, lang: str = 'es') -> discord.Emb
             .add_field(
                 name='> Send evidence',
                 value=(
-                    'Once you have answered the questions, use this channel to send images of your '
-                    'projects or your Minecraft world; if you have other related content it is also '
-                    'accepted. What you send must match the roles you chose.\n\n'
+                    'Inside the form itself you must attach images of your projects or your '
+                    'Minecraft world matching the roles you chose (if you need to send videos or '
+                    'extra screenshots afterwards, you can leave them in this channel).\n\n'
                     '`       We do not accept forms without evidence.       `'
                 ),
                 inline=False,
@@ -89,9 +88,8 @@ def form_banner_embed(client: DisManagerClient, lang: str = 'es') -> discord.Emb
             .add_field(
                 name='> Responde las preguntas',
                 value=(
-                    'Como parte de tu postulación te pediremos que respondas las preguntas que se '
-                    'muestran en el desplegable de abajo. Responde las preguntas personales primero, '
-                    'luego escoge al menos un rol y responde las preguntas asociadas al mismo.'
+                    'Presiona el botón `Completar formulario` de abajo para rellenar tus datos, '
+                    'elegir los roles que te interesan y contarnos sobre tu experiencia.'
                 ),
                 inline=False,
             )
@@ -122,9 +120,9 @@ def form_banner_embed(client: DisManagerClient, lang: str = 'es') -> discord.Emb
             .add_field(
                 name='> Mandar evidencia',
                 value=(
-                    'Una vez hayas respondido las preguntas, usa este canal para mandar imágenes de '
-                    'tus proyectos o tu mundo de Minecraft, si tienes otro tipo contenido relacionado '
-                    'también es aceptado. Lo que mandes debe ser acorde a los roles escogidos.\n\n'
+                    'Dentro del mismo formulario deberás adjuntar imágenes de tus proyectos o de tu '
+                    'mundo de Minecraft acordes a los roles escogidos (si necesitas enviar videos o '
+                    'más capturas después, puedes dejarlas por este canal).\n\n'
                     '`       No aceptamos formularios sin evidencias.       `'
                 ),
                 inline=False,

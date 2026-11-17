@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import io
 from collections.abc import Iterable
 from datetime import datetime
 from typing import cast
@@ -202,7 +201,7 @@ class ApplicationFormModal(discord.ui.Modal):
             await interaction.followup.send(err, ephemeral=True)
             return
 
-        raw_files = [(att.filename, await att.read()) for att in uploaded]
+        forms_files = [await att.to_file() for att in uploaded]
 
         icon_url = client.user.display_avatar.url if client.user is not None else None
         title = (
@@ -234,7 +233,6 @@ class ApplicationFormModal(discord.ui.Modal):
             .set_thumbnail(url=interaction.user.display_avatar.url)
         )
 
-        forms_files = [discord.File(io.BytesIO(data), filename=name) for name, data in raw_files]
         new_form = await forms_channel.send(embed=form_embed, files=forms_files)
         for custom_emoji, fallback in (
             (forms_cfg.emoji_yes, '✅'),
@@ -247,9 +245,6 @@ class ApplicationFormModal(discord.ui.Modal):
                     await new_form.add_reaction(fallback)
             except discord.HTTPException:
                 await new_form.add_reaction(fallback)
-
-        ticket_files = [discord.File(io.BytesIO(data), filename=name) for name, data in raw_files]
-        await interaction.channel.send(embed=form_embed, files=ticket_files)
 
         owner_id, stored_lang, completed = mark_section_completed(
             self.form_message.id,
