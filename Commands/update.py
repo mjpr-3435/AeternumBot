@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import zipfile
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -46,6 +47,17 @@ class _CommitInfo:
     author: str
     date_iso: str
     message: str
+
+
+def _format_commit_date(date_iso: str) -> str:
+    text = date_iso.strip()
+    if not text:
+        return '*Desconocida*'
+    try:
+        unix = int(datetime.fromisoformat(text).timestamp())
+    except ValueError:
+        return f'`{text}`'
+    return f'<t:{unix}:f> (<t:{unix}:R>)'
 
 
 def _github_headers(token: str) -> dict[str, str]:
@@ -197,7 +209,7 @@ class UpdateAddonsView(discord.ui.LayoutView):
             f'## Actualizar Addons desde GitHub\n'
             f'- **Repositorio:** `{repo}` (`{branch}`)\n'
             f'- **Último commit:** `{commit.sha}` · {commit.author}\n'
-            f'- **Fecha:** `{commit.date_iso}`\n'
+            f'- **Fecha:** {_format_commit_date(commit.date_iso)}\n'
             f'- **Mensaje:** {commit.message}\n\n'
             f'> Se preservarán `config.yml`, `.legacy/` y todos los registros locales (`.json` / `.csv`).'
         )
