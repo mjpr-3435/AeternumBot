@@ -54,23 +54,68 @@ def new_log(message: discord.Message, user_id: int, lang: str = 'es') -> None:
         'log_message_id': 0,
         'owner_id': user_id,
         'lang': lang,
+        'completed': [],
     }
     _save_forms(data)
 
 
+def get_completed_sections(form_id: int) -> set[str]:
+    """Return the set of completed form sections for ``form_id``."""
+    entry = _load_forms().get(str(form_id))
+    if entry is None:
+        return set()
+    raw = entry.get('completed', [])
+    completed = {str(item) for item in raw if isinstance(item, str)} if isinstance(raw, list) else set()
+    if int(entry.get('log_message_id', 0) or 0) > 0:
+        completed.add('personal')
+    return completed
+
+
+def mark_section_completed(
+    form_id: int,
+    section: str,
+    *,
+    log_message_id: int | None = None,
+) -> tuple[int, str, set[str]]:
+    """Mark ``section`` completed for ``form_id`` and return ``(owner_id, lang, completed)``."""
+    data = _load_forms()
+    entry = data.get(str(form_id))
+    if entry is None:
+        return 0, 'es', {section}
+
+    if log_message_id is not None:
+        entry['log_message_id'] = log_message_id
+
+    raw = entry.get('completed', [])
+    completed = [str(item) for item in raw if isinstance(item, str)] if isinstance(raw, list) else []
+    if int(entry.get('log_message_id', 0) or 0) > 0 and 'personal' not in completed:
+        completed.append('personal')
+    if section not in completed:
+        completed.append(section)
+    entry['completed'] = completed
+    _save_forms(data)
+    return int(entry.get('owner_id', 0)), str(entry.get('lang', 'es')), set(completed)
+
+
 async def reactive_views(client: DisManagerClient) -> None:
-    """Reattach interactive dropdown views to active form messages."""
+    """Reattach interactive button views with persisted completion state to active form messages."""
     from .FormViews import FormBannerView
 
     for entry in _load_forms().values():
         channel = client.get_channel(int(entry['channel_id']))
         if not isinstance(channel, discord.abc.Messageable):
             continue
+        msg_id = int(entry['message_id'])
+        completed = get_completed_sections(msg_id)
+        view = FormBannerView(
+            int(entry['owner_id']),
+            lang=str(entry.get('lang', 'es')),
+            completed=completed,
+        )
+        client.add_view(view, message_id=msg_id)
         with contextlib.suppress(Exception):
-            form_msg = await channel.fetch_message(int(entry['message_id']))
-            await form_msg.edit(
-                view=FormBannerView(int(entry['owner_id']), lang=str(entry.get('lang', 'es')))
-            )
+            form_msg = await channel.fetch_message(msg_id)
+            await form_msg.edit(view=view)
 
 
 async def update_log(client: DisManagerClient) -> None:

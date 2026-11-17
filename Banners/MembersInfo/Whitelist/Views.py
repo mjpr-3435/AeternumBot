@@ -132,10 +132,17 @@ def whitelist_embed(
 class AddNicknameModal(discord.ui.Modal, title='Agregar a la Whitelist'):
     """Modal to add a Minecraft player to the whitelist."""
 
-    nickname: discord.ui.TextInput[AddNicknameModal] = discord.ui.TextInput(
-        label='Nickname (Considera mayúsculas y minúsculas)',
-        required=True,
-    )
+    nickname: discord.ui.TextInput[AddNicknameModal]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.nickname = discord.ui.TextInput(required=True)
+        self.add_item(
+            discord.ui.Label(
+                text='Nickname (Considera mayúsculas y minúsculas)',
+                component=self.nickname,
+            )
+        )
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True, thinking=True)
@@ -187,10 +194,17 @@ class AddNicknameModal(discord.ui.Modal, title='Agregar a la Whitelist'):
 class RemoveNicknameModal(discord.ui.Modal, title='Remover de la Whitelist'):
     """Modal to remove a Minecraft player from the whitelist."""
 
-    nickname: discord.ui.TextInput[RemoveNicknameModal] = discord.ui.TextInput(
-        label='Nickname (Considera mayúsculas y minúsculas)',
-        required=True,
-    )
+    nickname: discord.ui.TextInput[RemoveNicknameModal]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.nickname = discord.ui.TextInput(required=True)
+        self.add_item(
+            discord.ui.Label(
+                text='Nickname (Considera mayúsculas y minúsculas)',
+                component=self.nickname,
+            )
+        )
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True, thinking=True)
@@ -235,21 +249,23 @@ class RemoveNicknameModal(discord.ui.Modal, title='Remover de la Whitelist'):
 class PurgeInactivesModal(discord.ui.Modal, title='Purge Inactives'):
     """Admin-only modal to purge inactive whitelist entries."""
 
-    confirmation: discord.ui.TextInput[PurgeInactivesModal] = discord.ui.TextInput(
-        label='Escribe PURGE para confirmar',
-        placeholder='PURGE',
-        required=True,
-    )
-    exclusions: discord.ui.TextInput[PurgeInactivesModal] = discord.ui.TextInput(
-        label='Excluir nombres',
-        placeholder='Un nombre por línea:\nJugador1\nJugador2',
-        required=False,
-        style=discord.TextStyle.paragraph,
-    )
+    confirmation: discord.ui.TextInput[PurgeInactivesModal]
+    exclusions: discord.ui.TextInput[PurgeInactivesModal]
 
     def __init__(self, whitelist_view: WhitelistListView) -> None:
         super().__init__()
         self.whitelist_view = whitelist_view
+        self.confirmation = discord.ui.TextInput(
+            placeholder='PURGE',
+            required=True,
+        )
+        self.exclusions = discord.ui.TextInput(
+            placeholder='Un nombre por línea:\nJugador1\nJugador2',
+            required=False,
+            style=discord.TextStyle.paragraph,
+        )
+        self.add_item(discord.ui.Label(text='Escribe PURGE para confirmar', component=self.confirmation))
+        self.add_item(discord.ui.Label(text='Excluir nombres', component=self.exclusions))
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer(ephemeral=True, thinking=True)

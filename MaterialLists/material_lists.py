@@ -163,13 +163,17 @@ class EditorsView(discord.ui.View):
 class TitleModal(discord.ui.Modal, title='Cambiar título del proyecto'):
     """Modal for editing a material list's title."""
 
-    title_input: discord.ui.TextInput[TitleModal] = discord.ui.TextInput(label='Título', max_length=256)
+    title_input: discord.ui.TextInput[TitleModal]
 
     def __init__(self, addon: MaterialListsCog, record: dict[str, Any]) -> None:
         super().__init__()
         self.addon = addon
         self.record = record
-        self.title_input.default = str(record['title'])
+        self.title_input = discord.ui.TextInput(
+            default=str(record['title']),
+            max_length=256,
+        )
+        self.add_item(discord.ui.Label(text='Título', component=self.title_input))
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         self.record['title'] = self.title_input.value.strip()

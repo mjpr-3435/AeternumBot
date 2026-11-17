@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import datetime
 from typing import Any, cast
 
@@ -7,7 +8,11 @@ import discord
 from Classes.config import get_ae_config
 from dismanager.classes import DisManagerClient
 
-from .LogInteraction import form_info_request, form_info_update
+from .LogInteraction import (
+    form_info_request,
+    get_completed_sections,
+    mark_section_completed,
+)
 
 
 def _missing_form_text(lang: str) -> str:
@@ -36,6 +41,7 @@ def _append_answers_embed(
 
 async def _append_answers_to_logged_form(
     interaction: discord.Interaction,
+    section_key: str,
     section_name: str,
     questions: list[tuple[str, discord.ui.TextInput[Any]]],
     success_text: str,
@@ -60,6 +66,12 @@ async def _append_answers_to_logged_form(
     form_message = await forms_channel.fetch_message(int(log_message_id))
     updated_embed = _append_answers_embed(form_message.embeds[0], section_name, questions)
     await form_message.edit(embeds=[updated_embed])
+
+    owner_id, stored_lang, completed = mark_section_completed(interaction.message.id, section_key)
+    new_view = FormBannerView(owner_id, lang=stored_lang, completed=completed)
+    client.add_view(new_view, message_id=interaction.message.id)
+    await interaction.message.edit(view=new_view)
+
     response = await interaction.followup.send(success_text, wait=True)
     await response.delete(delay=60)
 
@@ -110,7 +122,11 @@ async def _submit_personal_form(
         except discord.HTTPException:
             await new_form.add_reaction(fallback)
 
-    form_info_update(interaction.message.id, {'log_message_id': new_form.id})
+    owner_id, stored_lang, completed = mark_section_completed(
+        interaction.message.id,
+        'personal',
+        log_message_id=new_form.id,
+    )
     updated_embed = discord.Embed.from_dict(interaction.message.embeds[0].to_dict())
     if lang == 'en':
         updated_embed.add_field(
@@ -125,57 +141,74 @@ async def _submit_personal_form(
         )
         ack = '✔ Las respuestas fueron agregadas a tu formulario.'
 
-    await interaction.message.edit(embed=updated_embed)
+    new_view = FormBannerView(owner_id, lang=stored_lang, completed=completed)
+    client.add_view(new_view, message_id=interaction.message.id)
+    await interaction.message.edit(embed=updated_embed, view=new_view)
     response = await interaction.followup.send(ack, wait=True)
     await response.delete(delay=60)
 
 
-class FormBannerView(discord.ui.View):
-    """Persistent section selector view for application forms."""
+class _FormSectionButton(discord.ui.Button['FormBannerView']):
+    def __init__(self, *, label: str, section: str, disabled: bool) -> None:
+        super().__init__(
+            label=label,
+            style=discord.ButtonStyle.secondary,
+            custom_id=f'form:btn:{section}',
+            disabled=disabled,
+            row=0,
+        )
+        self.section = section
 
-    def __init__(self, owner_id: int, lang: str = 'es') -> None:
+    async def callback(self, interaction: discord.Interaction) -> None:
+        assert self.view is not None
+        await self.view.handle_section(interaction, self.section)
+
+
+class FormBannerView(discord.ui.View):
+    """Persistent 4-button section view for application forms."""
+
+    def __init__(
+        self,
+        owner_id: int,
+        lang: str = 'es',
+        completed: Iterable[str] = (),
+    ) -> None:
         super().__init__(timeout=None)
         self.owner_id = owner_id
         self.lang = lang
+        self.completed = set(completed)
 
-        for child in self.children:
-            if isinstance(child, discord.ui.Select) and child.custom_id == 'form:section_select':
-                if lang == 'en':
-                    child.placeholder = 'Questions'
-                    child.options = [
-                        discord.SelectOption(label='Personal', value='0'),
-                        discord.SelectOption(label='(Role) Grinder', value='1'),
-                        discord.SelectOption(label='(Role) Redstoner', value='2'),
-                        discord.SelectOption(label='(Role) Builder', value='3'),
-                    ]
-                else:
-                    child.placeholder = 'Preguntas'
-                    child.options = [
-                        discord.SelectOption(label='Personales', value='0'),
-                        discord.SelectOption(label='(Rol) Grinder', value='1'),
-                        discord.SelectOption(label='(Rol) Redstoner', value='2'),
-                        discord.SelectOption(label='(Rol) Decorador', value='3'),
-                    ]
+        buttons = (
+            (
+                ('Personal', 'personal'),
+                ('Grinder', 'grinder'),
+                ('Redstoner', 'redstoner'),
+                ('Builder', 'builder'),
+            )
+            if lang == 'en'
+            else (
+                ('Personales', 'personal'),
+                ('Grinder', 'grinder'),
+                ('Redstoner', 'redstoner'),
+                ('Decorador', 'builder'),
+            )
+        )
+        for label, section in buttons:
+            self.add_item(
+                _FormSectionButton(
+                    label=label,
+                    section=section,
+                    disabled=section in self.completed,
+                )
+            )
 
-    @discord.ui.select(
-        placeholder='Preguntas',
-        row=0,
-        custom_id='form:section_select',
-        options=[
-            discord.SelectOption(label='Personales', value='0'),
-            discord.SelectOption(label='(Rol) Grinder', value='1'),
-            discord.SelectOption(label='(Rol) Redstoner', value='2'),
-            discord.SelectOption(label='(Rol) Decorador', value='3'),
-        ],
-    )
-    async def role_form_selection(
-        self,
-        interaction: discord.Interaction,
-        selection: discord.ui.Select[FormBannerView],
-    ) -> None:
+    async def handle_section(self, interaction: discord.Interaction, section: str) -> None:
         if interaction.message is None:
             return
-        log_message_id = form_info_request(interaction.message.id, ['log_message_id'])
+        log_message_id, owner_id = form_info_request(
+            interaction.message.id,
+            ['log_message_id', 'owner_id'],
+        )
         if log_message_id is None:
             await interaction.response.send_message(
                 _missing_form_text(self.lang),
@@ -184,7 +217,8 @@ class FormBannerView(discord.ui.View):
             )
             return
 
-        if interaction.user.id != self.owner_id:
+        effective_owner = int(owner_id) if owner_id else self.owner_id
+        if interaction.user.id != effective_owner:
             text = (
                 '✖ Only the form creator can interact with it.'
                 if self.lang == 'en'
@@ -193,18 +227,18 @@ class FormBannerView(discord.ui.View):
             await interaction.response.send_message(text, ephemeral=True, delete_after=5)
             return
 
-        selected = int(selection.values[0])
-        has_personal = bool(log_message_id)
+        completed = get_completed_sections(interaction.message.id)
+        if section in completed:
+            text = (
+                '✖ You already answered these questions.'
+                if self.lang == 'en'
+                else '✖ Ya respondiste estas preguntas.'
+            )
+            await interaction.response.send_message(text, ephemeral=True, delete_after=5)
+            return
 
-        if selected == 0:
-            if has_personal:
-                text = (
-                    '✖ You already answered these questions.'
-                    if self.lang == 'en'
-                    else '✖ Ya respondiste estas preguntas.'
-                )
-                await interaction.response.send_message(text, ephemeral=True, delete_after=5)
-                return
+        has_personal = 'personal' in completed or bool(log_message_id)
+        if section == 'personal':
             await interaction.response.send_modal(EnFormModal() if self.lang == 'en' else EsFormModal())
             return
 
@@ -217,12 +251,20 @@ class FormBannerView(discord.ui.View):
             await interaction.response.send_message(text, ephemeral=True, delete_after=5)
             return
 
-        modal_map: dict[int, discord.ui.Modal] = (
-            {1: EnFormGrinderModal(), 2: EnFormRedstonerModal(), 3: EnFormBuilderModal()}
+        modal_map: dict[str, discord.ui.Modal] = (
+            {
+                'grinder': EnFormGrinderModal(),
+                'redstoner': EnFormRedstonerModal(),
+                'builder': EnFormBuilderModal(),
+            }
             if self.lang == 'en'
-            else {1: EsFormGrinderModal(), 2: EsFormRedstonerModal(), 3: EsFormBuilderModal()}
+            else {
+                'grinder': EsFormGrinderModal(),
+                'redstoner': EsFormRedstonerModal(),
+                'builder': EsFormBuilderModal(),
+            }
         )
-        modal = modal_map.get(selected)
+        modal = modal_map.get(section)
         if modal is not None:
             await interaction.response.send_modal(modal)
 
@@ -258,6 +300,7 @@ class EsFormBuilderModal(_FormQuestionsModal):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await _append_answers_to_logged_form(
             interaction,
+            'builder',
             '> Preguntas de Builder',
             self.questions,
             '✔ Las respuestas fueron agregadas a tu formulario.\nNo olvides enviar tus evidencias.',
@@ -281,6 +324,7 @@ class EnFormBuilderModal(_FormQuestionsModal):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await _append_answers_to_logged_form(
             interaction,
+            'builder',
             '> Builder Questions',
             self.questions,
             '✔ Answers added to your form.\nDo not forget to send your evidence.',
@@ -304,6 +348,7 @@ class EsFormGrinderModal(_FormQuestionsModal):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await _append_answers_to_logged_form(
             interaction,
+            'grinder',
             '> Preguntas de Grinder',
             self.questions,
             '✔ Las respuestas fueron agregadas a tu formulario.\nNo olvides enviar tus evidencias.',
@@ -327,6 +372,7 @@ class EnFormGrinderModal(_FormQuestionsModal):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await _append_answers_to_logged_form(
             interaction,
+            'grinder',
             '> Grinder Questions',
             self.questions,
             '✔ Answers added to your form.\nDo not forget to send your evidence.',
@@ -350,6 +396,7 @@ class EsFormRedstonerModal(_FormQuestionsModal):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await _append_answers_to_logged_form(
             interaction,
+            'redstoner',
             '> Preguntas de Redstoner',
             self.questions,
             '✔ Las respuestas fueron agregadas a tu formulario.\nNo olvides enviar tus evidencias.',
@@ -373,6 +420,7 @@ class EnFormRedstonerModal(_FormQuestionsModal):
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await _append_answers_to_logged_form(
             interaction,
+            'redstoner',
             '> Redstoner Questions',
             self.questions,
             '✔ Answers added to your form.\nDo not forget to send your evidence.',

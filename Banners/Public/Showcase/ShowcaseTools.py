@@ -70,17 +70,18 @@ async def load_showcase_controls(client: DisManagerClient) -> None:
 class ModifyShowcaseTitleModal(discord.ui.Modal, title='Modificar titulo'):
     """Modal for editing a Showcase thread title."""
 
-    title_input: discord.ui.TextInput[ModifyShowcaseTitleModal] = discord.ui.TextInput(
-        label='Edita el titulo del post',
-        style=discord.TextStyle.short,
-        max_length=100,
-        required=True,
-    )
+    title_input: discord.ui.TextInput[ModifyShowcaseTitleModal]
 
     def __init__(self, current_title: str, target_thread: discord.Thread) -> None:
         super().__init__()
-        self.title_input.default = current_title
         self.target_thread = target_thread
+        self.title_input = discord.ui.TextInput(
+            default=current_title,
+            style=discord.TextStyle.short,
+            max_length=100,
+            required=True,
+        )
+        self.add_item(discord.ui.Label(text='Edita el titulo del post', component=self.title_input))
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await self.target_thread.edit(name=self.title_input.value)
@@ -90,16 +91,17 @@ class ModifyShowcaseTitleModal(discord.ui.Modal, title='Modificar titulo'):
 class ModifyShowcaseTextModal(discord.ui.Modal, title='Modificar contenido'):
     """Modal for editing a Showcase post body."""
 
-    text_input: discord.ui.TextInput[ModifyShowcaseTextModal] = discord.ui.TextInput(
-        label='Edita el contenido del post',
-        style=discord.TextStyle.paragraph,
-        required=True,
-    )
+    text_input: discord.ui.TextInput[ModifyShowcaseTextModal]
 
     def __init__(self, current_text: str, target_message: discord.Message) -> None:
         super().__init__()
-        self.text_input.default = current_text
         self.target_message = target_message
+        self.text_input = discord.ui.TextInput(
+            default=current_text,
+            style=discord.TextStyle.paragraph,
+            required=True,
+        )
+        self.add_item(discord.ui.Label(text='Edita el contenido del post', component=self.text_input))
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await self.target_message.edit(content=self.text_input.value, view=ShowcasePostMenuView())

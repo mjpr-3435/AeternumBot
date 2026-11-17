@@ -8,10 +8,12 @@ from Utils.discord_helpers import is_admin
 
 
 class _SendMessageModal(discord.ui.Modal, title='Enviar mensaje'):
-    message: discord.ui.TextInput[_SendMessageModal] = discord.ui.TextInput(
-        label='Mensaje',
-        style=discord.TextStyle.paragraph,
-    )
+    message: discord.ui.TextInput[_SendMessageModal]
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.message = discord.ui.TextInput(style=discord.TextStyle.paragraph)
+        self.add_item(discord.ui.Label(text='Mensaje', component=self.message))
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         if isinstance(interaction.channel, discord.abc.Messageable):

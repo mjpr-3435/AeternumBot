@@ -13,11 +13,10 @@ class _EditMessageModal(discord.ui.Modal, title='Editar mensaje'):
         super().__init__()
         self._target_message = target_message
         self.new_message = discord.ui.TextInput(
-            label='Mensaje',
             style=discord.TextStyle.paragraph,
             default=target_message.content,
         )
-        self.add_item(self.new_message)
+        self.add_item(discord.ui.Label(text='Mensaje', component=self.new_message))
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
         await self._target_message.edit(content=self.new_message.value)
