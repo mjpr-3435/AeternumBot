@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import io
 from collections.abc import Iterable
 from datetime import datetime
-from typing import Any, cast
+from typing import cast
 
 import discord
 from Classes.config import get_ae_config
@@ -17,155 +18,282 @@ from .LogInteraction import (
 
 def _missing_form_text(lang: str) -> str:
     return (
-        '✖ This form is no longer registered.'
+        '✖ The form record was not found. Please open a new form.'
         if lang == 'en'
-        else '✖ Este formulario ya no esta registrado.'
+        else '✖ No se encontró el registro del formulario. Abre uno nuevo.'
     )
 
 
-def _append_answers_embed(
-    base_embed: discord.Embed,
-    section_name: str,
-    questions: list[tuple[str, discord.ui.TextInput[Any]]],
-) -> discord.Embed:
-    new_embed = discord.Embed.from_dict(base_embed.to_dict())
-    new_embed.add_field(inline=False, name=section_name, value='')
-    for label_text, question in questions:
-        new_embed.add_field(
-            inline=False,
-            name=label_text or 'Question',
-            value=question.value.strip()[:1024] or '-',
+class ApplicationFormModal(discord.ui.Modal):
+    """Unified Components v2 application modal with role selector and mandatory image upload."""
+
+    def __init__(self, *, form_message: discord.Message, lang: str) -> None:
+        is_en = lang == 'en'
+        super().__init__(title='Application Form' if is_en else 'Formulario de ingreso')
+        self.form_message = form_message
+        self.lang = lang
+
+        self.basic_input: discord.ui.TextInput[ApplicationFormModal] = discord.ui.TextInput(
+            style=discord.TextStyle.short,
+            placeholder=(
+                'E.g.: Steve, 20 years old, Mexico'
+                if is_en
+                else 'Ej: Steve, 20 años, Perú'
+            ),
+            max_length=150,
+            required=True,
         )
-    return new_embed
-
-
-async def _append_answers_to_logged_form(
-    interaction: discord.Interaction,
-    section_key: str,
-    section_name: str,
-    questions: list[tuple[str, discord.ui.TextInput[Any]]],
-    success_text: str,
-    lang: str,
-) -> None:
-    await interaction.response.defer(ephemeral=True, thinking=True)
-    if interaction.message is None:
-        return
-    log_message_id = form_info_request(interaction.message.id, ['log_message_id'])
-    if not log_message_id:
-        response = await interaction.followup.send(_missing_form_text(lang), wait=True)
-        await response.delete(delay=8)
-        return
-
-    client = cast(DisManagerClient, interaction.client)
-    forms_channel = client.get_channel(get_ae_config(client).forms.channel_id)
-    if not isinstance(forms_channel, discord.abc.Messageable):
-        response = await interaction.followup.send(_missing_form_text(lang), wait=True)
-        await response.delete(delay=8)
-        return
-
-    form_message = await forms_channel.fetch_message(int(log_message_id))
-    updated_embed = _append_answers_embed(form_message.embeds[0], section_name, questions)
-    await form_message.edit(embeds=[updated_embed])
-
-    owner_id, stored_lang, completed = mark_section_completed(interaction.message.id, section_key)
-    new_view = FormBannerView(owner_id, lang=stored_lang, completed=completed)
-    client.add_view(new_view, message_id=interaction.message.id)
-    await interaction.message.edit(view=new_view)
-
-    response = await interaction.followup.send(success_text, wait=True)
-    await response.delete(delay=60)
-
-
-async def _submit_personal_form(
-    interaction: discord.Interaction,
-    questions: list[tuple[str, discord.ui.TextInput[Any]]],
-    *,
-    lang: str,
-) -> None:
-    await interaction.response.defer(ephemeral=True, thinking=True)
-    if interaction.message is None or interaction.channel is None:
-        return
-
-    client = cast(DisManagerClient, interaction.client)
-    icon_url = client.user.display_avatar.url if client.user is not None else None
-    title = f'> Form {interaction.user.display_name}' if lang == 'en' else f'> Formulario {interaction.user.display_name}'
-    account_label = 'Discord account' if lang == 'en' else 'Cuenta de discord'
-    ticket_mention = interaction.channel.mention if isinstance(interaction.channel, discord.TextChannel) else f'<#{interaction.channel_id}>'
-
-    form_embed = (
-        discord.Embed(colour=0x2F3136, timestamp=datetime.now())
-        .set_footer(text='Forms System \u200b', icon_url=icon_url)
-        .add_field(inline=False, name=title, value='')
-        .add_field(inline=True, name=account_label, value=interaction.user.mention)
-        .add_field(inline=True, name='Ticket', value=ticket_mention)
-        .set_thumbnail(url=interaction.user.display_avatar.url)
-    )
-    for label_text, question in questions:
-        form_embed.add_field(
-            inline=False,
-            name=label_text or 'Question',
-            value=question.value.strip()[:1024] or '-',
+        role_options = (
+            [
+                discord.SelectOption(
+                    label='Grinder / Survival',
+                    value='Grinder',
+                    description='Gathering, mining, building and survival projects.',
+                ),
+                discord.SelectOption(
+                    label='Builder / Decorator',
+                    value='Builder',
+                    description='Designing decorations and aesthetics in creative/survival.',
+                ),
+                discord.SelectOption(
+                    label='Redstoner',
+                    value='Redstoner',
+                    description='Designing technical mechanisms, farms and storage.',
+                ),
+            ]
+            if is_en
+            else [
+                discord.SelectOption(
+                    label='Grinder / Survival',
+                    value='Grinder',
+                    description='Recolección, minar, construir y apoyar en proyectos.',
+                ),
+                discord.SelectOption(
+                    label='Decorador / Builder',
+                    value='Decorador',
+                    description='Diseñar decoraciones y estética en creativo/survival.',
+                ),
+                discord.SelectOption(
+                    label='Redstoner',
+                    value='Redstoner',
+                    description='Diseñar mecanismos técnicos, granjas y almacenamiento.',
+                ),
+            ]
+        )
+        self.roles_select: discord.ui.Select[ApplicationFormModal] = discord.ui.Select(
+            placeholder=(
+                'Select one or more roles...'
+                if is_en
+                else 'Selecciona uno o más roles...'
+            ),
+            min_values=1,
+            max_values=len(role_options),
+            options=role_options,
+            required=True,
+        )
+        self.experience_input: discord.ui.TextInput[ApplicationFormModal] = discord.ui.TextInput(
+            style=discord.TextStyle.paragraph,
+            placeholder=(
+                'Tell us about your worlds/servers, or what you enjoy doing (mining, building, farms)...'
+                if is_en
+                else 'Cuéntanos de tus mundos/servidores, o qué disfrutas hacer (minar, decorar, granjas)...'
+            ),
+            max_length=1000,
+            required=True,
+        )
+        self.autonomy_input: discord.ui.TextInput[ApplicationFormModal] = discord.ui.TextInput(
+            style=discord.TextStyle.paragraph,
+            placeholder=(
+                'Mention which mods you use (Litematica, MiniHUD, etc.) and how you learn on your own.'
+                if is_en
+                else 'Menciona qué mods manejas (Litematica, MiniHUD, etc.) y cómo investigas por tu cuenta.'
+            ),
+            max_length=1000,
+            required=True,
+        )
+        self.evidence_upload: discord.ui.FileUpload[ApplicationFormModal] = discord.ui.FileUpload(
+            min_values=1,
+            max_values=10,
+            required=True,
         )
 
-    forms_cfg = get_ae_config(client).forms
-    forms_channel = client.get_channel(forms_cfg.channel_id)
-    if not isinstance(forms_channel, discord.abc.Messageable):
-        return
-
-    new_form = await forms_channel.send(embed=form_embed)
-    for custom_emoji, fallback in (
-        (forms_cfg.emoji_yes, '✅'),
-        (forms_cfg.emoji_no, '❌'),
-    ):
-        try:
-            await new_form.add_reaction(custom_emoji)
-        except discord.HTTPException:
-            await new_form.add_reaction(fallback)
-
-    owner_id, stored_lang, completed = mark_section_completed(
-        interaction.message.id,
-        'personal',
-        log_message_id=new_form.id,
-    )
-    updated_embed = discord.Embed.from_dict(interaction.message.embeds[0].to_dict())
-    if lang == 'en':
-        updated_embed.add_field(
-            name='> Registered Form',
-            value=f'📋{new_form.jump_url} (Utility for interviewers)',
+        self.add_item(
+            discord.ui.Label(
+                text='Basic Info' if is_en else 'Datos básicos',
+                description=(
+                    'Your exact Minecraft nickname, age and country.'
+                    if is_en
+                    else 'Tu nick exacto de Minecraft, tu edad y tu país.'
+                ),
+                component=self.basic_input,
+            )
         )
-        ack = '✔ Answers added to your form.'
-    else:
-        updated_embed.add_field(
-            name='> Formulario Registrado',
-            value=f'📋{new_form.jump_url} (Utilidad para los entrevistadores)',
+        self.add_item(
+            discord.ui.Label(
+                text='Roles of Interest' if is_en else 'Roles de interés',
+                description=(
+                    'Choose the areas where you want to participate in the server.'
+                    if is_en
+                    else 'Elige en qué áreas te interesa participar dentro del servidor.'
+                ),
+                component=self.roles_select,
+            )
         )
-        ack = '✔ Las respuestas fueron agregadas a tu formulario.'
+        self.add_item(
+            discord.ui.Label(
+                text='Experience & Playstyle' if is_en else 'Experiencia y qué te gusta hacer',
+                description=(
+                    'What do you usually do in MC? If new to tech, how would you like to help or learn?'
+                    if is_en
+                    else '¿Qué sueles hacer en MC? Si eres nuevo en técnico, ¿en qué te gustaría apoyar o aprender?'
+                ),
+                component=self.experience_input,
+            )
+        )
+        self.add_item(
+            discord.ui.Label(
+                text='Tools & Autonomy' if is_en else 'Herramientas y autonomía',
+                description=(
+                    'What mods do you use on your own and how do you figure out things you do not know?'
+                    if is_en
+                    else '¿Qué mods usas por tu cuenta y cómo te las arreglas cuando no sabes hacer algo?'
+                ),
+                component=self.autonomy_input,
+            )
+        )
+        self.add_item(
+            discord.ui.Label(
+                text='Screenshots & Evidence' if is_en else 'Fotos y evidencias',
+                description=(
+                    'Upload screenshots of your worlds, builds or projects (1 to 10 images).'
+                    if is_en
+                    else 'Sube capturas de tus mundos, construcciones o proyectos (1 a 10 imágenes).'
+                ),
+                component=self.evidence_upload,
+            )
+        )
 
-    new_view = FormBannerView(owner_id, lang=stored_lang, completed=completed)
-    client.add_view(new_view, message_id=interaction.message.id)
-    await interaction.message.edit(embed=updated_embed, view=new_view)
-    response = await interaction.followup.send(ack, wait=True)
-    await response.delete(delay=60)
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        is_en = self.lang == 'en'
+        uploaded = list(self.evidence_upload.values)
+        for attachment in uploaded:
+            if attachment.content_type is not None and not attachment.content_type.startswith('image/'):
+                msg = (
+                    '✖ All uploaded files must be images.'
+                    if is_en
+                    else '✖ Todos los archivos subidos deben ser imágenes.'
+                )
+                await interaction.response.send_message(msg, ephemeral=True)
+                return
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
+        if not isinstance(interaction.channel, discord.abc.Messageable):
+            return
+
+        client = cast(DisManagerClient, interaction.client)
+        forms_cfg = get_ae_config(client).forms
+        forms_channel = client.get_channel(forms_cfg.channel_id)
+        if not isinstance(forms_channel, discord.abc.Messageable):
+            err = (
+                '✖ The Forms channel is not configured (`Forms.Channel ID` in `/config`).'
+                if is_en
+                else '✖ El canal de Forms no está configurado (`Forms.Channel ID` en `/config`).'
+            )
+            await interaction.followup.send(err, ephemeral=True)
+            return
+
+        raw_files = [(att.filename, await att.read()) for att in uploaded]
+
+        icon_url = client.user.display_avatar.url if client.user is not None else None
+        title = (
+            f'> Form {interaction.user.display_name}'
+            if is_en
+            else f'> Formulario {interaction.user.display_name}'
+        )
+        account_label = 'Discord account' if is_en else 'Cuenta de discord'
+        roles_label = 'Roles' if is_en else 'Roles de interés'
+        basic_label = 'Basic Info' if is_en else 'Datos básicos'
+        exp_label = 'Experience & Playstyle' if is_en else 'Experiencia y qué te gusta hacer'
+        auto_label = 'Tools & Autonomy' if is_en else 'Herramientas y autonomía'
+        ticket_mention = (
+            interaction.channel.mention
+            if isinstance(interaction.channel, discord.TextChannel)
+            else f'<#{interaction.channel_id}>'
+        )
+
+        form_embed = (
+            discord.Embed(colour=0x2F3136, timestamp=datetime.now())
+            .set_footer(text='Forms System \u200b', icon_url=icon_url)
+            .add_field(inline=False, name=title, value='')
+            .add_field(inline=True, name=account_label, value=interaction.user.mention)
+            .add_field(inline=True, name='Ticket', value=ticket_mention)
+            .add_field(inline=True, name=roles_label, value=', '.join(self.roles_select.values))
+            .add_field(inline=False, name=basic_label, value=self.basic_input.value.strip()[:1024] or '-')
+            .add_field(inline=False, name=exp_label, value=self.experience_input.value.strip()[:1024] or '-')
+            .add_field(inline=False, name=auto_label, value=self.autonomy_input.value.strip()[:1024] or '-')
+            .set_thumbnail(url=interaction.user.display_avatar.url)
+        )
+
+        forms_files = [discord.File(io.BytesIO(data), filename=name) for name, data in raw_files]
+        new_form = await forms_channel.send(embed=form_embed, files=forms_files)
+        for custom_emoji, fallback in (
+            (forms_cfg.emoji_yes, '✅'),
+            (forms_cfg.emoji_no, '❌'),
+        ):
+            try:
+                if custom_emoji.strip():
+                    await new_form.add_reaction(custom_emoji)
+                else:
+                    await new_form.add_reaction(fallback)
+            except discord.HTTPException:
+                await new_form.add_reaction(fallback)
+
+        ticket_files = [discord.File(io.BytesIO(data), filename=name) for name, data in raw_files]
+        await interaction.channel.send(embed=form_embed, files=ticket_files)
+
+        owner_id, stored_lang, completed = mark_section_completed(
+            self.form_message.id,
+            'personal',
+            log_message_id=new_form.id,
+        )
+        updated_embed = discord.Embed.from_dict(self.form_message.embeds[0].to_dict())
+        if is_en:
+            updated_embed.add_field(
+                name='> Registered Form',
+                value=f'📋{new_form.jump_url} (Utility for interviewers)',
+            )
+            ack = '✔ Your form and evidence were submitted.'
+        else:
+            updated_embed.add_field(
+                name='> Formulario Registrado',
+                value=f'📋{new_form.jump_url} (Utilidad para los entrevistadores)',
+            )
+            ack = '✔ Tu formulario y evidencias fueron enviados.'
+
+        new_view = FormBannerView(owner_id, lang=stored_lang, completed=completed)
+        client.add_view(new_view, message_id=self.form_message.id)
+        await self.form_message.edit(embed=updated_embed, view=new_view)
+        response = await interaction.followup.send(ack, ephemeral=True, wait=True)
+        await response.delete(delay=30)
 
 
-class _FormSectionButton(discord.ui.Button['FormBannerView']):
-    def __init__(self, *, label: str, section: str, disabled: bool) -> None:
+class _OpenFormButton(discord.ui.Button['FormBannerView']):
+    def __init__(self, *, label: str, disabled: bool) -> None:
         super().__init__(
             label=label,
             style=discord.ButtonStyle.secondary,
-            custom_id=f'form:btn:{section}',
+            custom_id='form:btn:personal',
             disabled=disabled,
             row=0,
         )
-        self.section = section
 
     async def callback(self, interaction: discord.Interaction) -> None:
         assert self.view is not None
-        await self.view.handle_section(interaction, self.section)
+        await self.view.handle_open(interaction)
 
 
 class FormBannerView(discord.ui.View):
-    """Persistent 4-button section view for application forms."""
+    """Persistent single-button view for opening the unified application form modal."""
 
     def __init__(
         self,
@@ -178,31 +306,15 @@ class FormBannerView(discord.ui.View):
         self.lang = lang
         self.completed = set(completed)
 
-        buttons = (
-            (
-                ('Personal', 'personal'),
-                ('Grinder', 'grinder'),
-                ('Redstoner', 'redstoner'),
-                ('Builder', 'builder'),
-            )
-            if lang == 'en'
-            else (
-                ('Personales', 'personal'),
-                ('Grinder', 'grinder'),
-                ('Redstoner', 'redstoner'),
-                ('Decorador', 'builder'),
+        label = 'Complete Form' if lang == 'en' else 'Completar formulario'
+        self.add_item(
+            _OpenFormButton(
+                label=label,
+                disabled='personal' in self.completed,
             )
         )
-        for label, section in buttons:
-            self.add_item(
-                _FormSectionButton(
-                    label=label,
-                    section=section,
-                    disabled=section in self.completed,
-                )
-            )
 
-    async def handle_section(self, interaction: discord.Interaction, section: str) -> None:
+    async def handle_open(self, interaction: discord.Interaction) -> None:
         if interaction.message is None:
             return
         log_message_id, owner_id = form_info_request(
@@ -228,243 +340,15 @@ class FormBannerView(discord.ui.View):
             return
 
         completed = get_completed_sections(interaction.message.id)
-        if section in completed:
+        if 'personal' in completed or bool(log_message_id):
             text = (
-                '✖ You already answered these questions.'
+                '✖ You already submitted your form.'
                 if self.lang == 'en'
-                else '✖ Ya respondiste estas preguntas.'
+                else '✖ Ya enviaste tu formulario.'
             )
             await interaction.response.send_message(text, ephemeral=True, delete_after=5)
             return
 
-        has_personal = 'personal' in completed or bool(log_message_id)
-        if section == 'personal':
-            await interaction.response.send_modal(EnFormModal() if self.lang == 'en' else EsFormModal())
-            return
-
-        if not has_personal:
-            text = (
-                '✖ Please answer the personal questions first.'
-                if self.lang == 'en'
-                else '✖ Por favor, responde primero las preguntas personales.'
-            )
-            await interaction.response.send_message(text, ephemeral=True, delete_after=5)
-            return
-
-        modal_map: dict[str, discord.ui.Modal] = (
-            {
-                'grinder': EnFormGrinderModal(),
-                'redstoner': EnFormRedstonerModal(),
-                'builder': EnFormBuilderModal(),
-            }
-            if self.lang == 'en'
-            else {
-                'grinder': EsFormGrinderModal(),
-                'redstoner': EsFormRedstonerModal(),
-                'builder': EsFormBuilderModal(),
-            }
-        )
-        modal = modal_map.get(section)
-        if modal is not None:
-            await interaction.response.send_modal(modal)
-
-
-class _FormQuestionsModal(discord.ui.Modal):
-    def __init__(
-        self,
-        *,
-        title: str,
-        prompts: tuple[tuple[str, discord.TextStyle], ...],
-    ) -> None:
-        super().__init__(title=title)
-        self.questions: list[tuple[str, discord.ui.TextInput[Any]]] = []
-        for label_text, style in prompts:
-            item: discord.ui.TextInput[Any] = discord.ui.TextInput(style=style)
-            self.questions.append((label_text, item))
-            self.add_item(discord.ui.Label(text=label_text, component=item))
-
-
-class EsFormBuilderModal(_FormQuestionsModal):
-    def __init__(self) -> None:
-        super().__init__(
-            title='Preguntas de Decorador',
-            prompts=(
-                ('Describe tu estilo de decoracion', discord.TextStyle.paragraph),
-                ('Explica como planificas una decoracion', discord.TextStyle.paragraph),
-                ('Cuentanos como aprendiste a decorar', discord.TextStyle.paragraph),
-                ('Usas WorldEdit? Para que exactamente?', discord.TextStyle.paragraph),
-                ('Usas plugins de builders? Cuales?', discord.TextStyle.paragraph),
-            ),
-        )
-
-    async def on_submit(self, interaction: discord.Interaction) -> None:
-        await _append_answers_to_logged_form(
-            interaction,
-            'builder',
-            '> Preguntas de Builder',
-            self.questions,
-            '✔ Las respuestas fueron agregadas a tu formulario.\nNo olvides enviar tus evidencias.',
-            'es',
-        )
-
-
-class EnFormBuilderModal(_FormQuestionsModal):
-    def __init__(self) -> None:
-        super().__init__(
-            title='Builder Questions',
-            prompts=(
-                ('Describe your decoration style', discord.TextStyle.paragraph),
-                ('Explain how you plan a decoration', discord.TextStyle.paragraph),
-                ('Tell us how you learned decoration', discord.TextStyle.paragraph),
-                ('Do you use WorldEdit? What for exactly?', discord.TextStyle.paragraph),
-                ('Do you use builder plugins? Which ones?', discord.TextStyle.paragraph),
-            ),
-        )
-
-    async def on_submit(self, interaction: discord.Interaction) -> None:
-        await _append_answers_to_logged_form(
-            interaction,
-            'builder',
-            '> Builder Questions',
-            self.questions,
-            '✔ Answers added to your form.\nDo not forget to send your evidence.',
-            'en',
-        )
-
-
-class EsFormGrinderModal(_FormQuestionsModal):
-    def __init__(self) -> None:
-        super().__init__(
-            title='Preguntas de Grinder',
-            prompts=(
-                ('Cual es el rango de efecto de un beacon?', discord.TextStyle.short),
-                ('Utilizas Litematica, MiniHud...? Para que?', discord.TextStyle.paragraph),
-                ('Usas Item Shadowing? Explica como hacerlo', discord.TextStyle.paragraph),
-                ('Dinos distintas formas de hacer un perimetro', discord.TextStyle.paragraph),
-                ('Como picas en un perimetro? Explicate', discord.TextStyle.paragraph),
-            ),
-        )
-
-    async def on_submit(self, interaction: discord.Interaction) -> None:
-        await _append_answers_to_logged_form(
-            interaction,
-            'grinder',
-            '> Preguntas de Grinder',
-            self.questions,
-            '✔ Las respuestas fueron agregadas a tu formulario.\nNo olvides enviar tus evidencias.',
-            'es',
-        )
-
-
-class EnFormGrinderModal(_FormQuestionsModal):
-    def __init__(self) -> None:
-        super().__init__(
-            title='Grinder Questions',
-            prompts=(
-                ('What is the effect range of a beacon?', discord.TextStyle.short),
-                ('Do you use Litematica, MiniHud...? What for?', discord.TextStyle.paragraph),
-                ('Do you use Item Shadowing? Explain it', discord.TextStyle.paragraph),
-                ('Tell us different ways to make a perimeter', discord.TextStyle.paragraph),
-                ('How do you mine in a perimeter? Explain it', discord.TextStyle.paragraph),
-            ),
-        )
-
-    async def on_submit(self, interaction: discord.Interaction) -> None:
-        await _append_answers_to_logged_form(
-            interaction,
-            'grinder',
-            '> Grinder Questions',
-            self.questions,
-            '✔ Answers added to your form.\nDo not forget to send your evidence.',
-            'en',
-        )
-
-
-class EsFormRedstonerModal(_FormQuestionsModal):
-    def __init__(self) -> None:
-        super().__init__(
-            title='Preguntas de Redstoner',
-            prompts=(
-                ('Para que se bloquean las tolvas?', discord.TextStyle.paragraph),
-                ('Explica la quasiconectividad', discord.TextStyle.paragraph),
-                ('Explica las funcionalidades de un comparador', discord.TextStyle.paragraph),
-                ('Que es un cero tick?', discord.TextStyle.paragraph),
-                ('Menciona y explica las 5 fases del tick', discord.TextStyle.paragraph),
-            ),
-        )
-
-    async def on_submit(self, interaction: discord.Interaction) -> None:
-        await _append_answers_to_logged_form(
-            interaction,
-            'redstoner',
-            '> Preguntas de Redstoner',
-            self.questions,
-            '✔ Las respuestas fueron agregadas a tu formulario.\nNo olvides enviar tus evidencias.',
-            'es',
-        )
-
-
-class EnFormRedstonerModal(_FormQuestionsModal):
-    def __init__(self) -> None:
-        super().__init__(
-            title='Redstoner Questions',
-            prompts=(
-                ('What are locked hoppers used for?', discord.TextStyle.paragraph),
-                ('Explain quasi-connectivity', discord.TextStyle.paragraph),
-                ('Explain the functionality of a comparator', discord.TextStyle.paragraph),
-                ('What is a zero tick?', discord.TextStyle.paragraph),
-                ('Mention and explain the 5 phases of the tick', discord.TextStyle.paragraph),
-            ),
-        )
-
-    async def on_submit(self, interaction: discord.Interaction) -> None:
-        await _append_answers_to_logged_form(
-            interaction,
-            'redstoner',
-            '> Redstoner Questions',
-            self.questions,
-            '✔ Answers added to your form.\nDo not forget to send your evidence.',
-            'en',
-        )
-
-
-class EsFormModal(_FormQuestionsModal):
-    def __init__(self) -> None:
-        super().__init__(
-            title='Formulario de ingreso',
-            prompts=(
-                ('Edad, pais y nick de MC', discord.TextStyle.short),
-                ('Por que deseas aplicar a Aeternum?', discord.TextStyle.paragraph),
-                ('Cuanto tiempo llevas jugando MC tecnico?', discord.TextStyle.paragraph),
-                ('Has estado en algun servidor tecnico?', discord.TextStyle.paragraph),
-                ('Que crees que puedes aportar a Aeternum?', discord.TextStyle.paragraph),
-            ),
-        )
-
-    async def on_submit(self, interaction: discord.Interaction) -> None:
-        await _submit_personal_form(
-            interaction,
-            self.questions,
-            lang='es',
-        )
-
-
-class EnFormModal(_FormQuestionsModal):
-    def __init__(self) -> None:
-        super().__init__(
-            title='Application Form',
-            prompts=(
-                ('Age, country and MC nickname', discord.TextStyle.short),
-                ('Why do you want to apply to Aeternum?', discord.TextStyle.paragraph),
-                ('How long have you been playing technical MC?', discord.TextStyle.paragraph),
-                ('Have you been in any technical server?', discord.TextStyle.paragraph),
-                ('How can you contribute to Aeternum?', discord.TextStyle.paragraph),
-            ),
-        )
-
-    async def on_submit(self, interaction: discord.Interaction) -> None:
-        await _submit_personal_form(
-            interaction,
-            self.questions,
-            lang='en',
+        await interaction.response.send_modal(
+            ApplicationFormModal(form_message=interaction.message, lang=self.lang)
         )

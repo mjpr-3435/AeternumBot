@@ -122,7 +122,7 @@ def banner_en_embed(
     else:
         active_days = f'{years} years {days} days'
     foundation_label = (
-        datetime.strptime(foundation_date, '%Y-%m-%d').strftime('%d-%m-%Y')
+        foundation_date.strip().replace('-', '/')
         if foundation_date.strip()
         else 'Unconfigured'
     )
@@ -196,7 +196,7 @@ def banner_es_embed(
     else:
         active_days = f'{years} años {days} días'
     foundation_label = (
-        datetime.strptime(foundation_date, '%Y-%m-%d').strftime('%d-%m-%Y')
+        foundation_date.strip().replace('-', '/')
         if foundation_date.strip()
         else 'Sin configurar'
     )
