@@ -704,7 +704,7 @@ class MembersInfoExtraModal(_BaseConfigModal):
 class _PrevPageButton(discord.ui.Button['ConfigBannerView']):
     def __init__(self, *, disabled: bool) -> None:
         super().__init__(
-            label='Anterior',
+            label='<',
             style=discord.ButtonStyle.secondary,
             disabled=disabled,
             row=1,
@@ -712,28 +712,19 @@ class _PrevPageButton(discord.ui.Button['ConfigBannerView']):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         assert self.view is not None
-        self.view.page = max(0, self.view.page - 1)
-        self.view.rebuild()
+        view = self.view
+        view.page = max(0, view.page - 1)
+        view.rebuild()
         await interaction.response.edit_message(
-            embed=self.view.build_embed(),
-            view=self.view,
-        )
-
-
-class _PageIndicatorButton(discord.ui.Button['ConfigBannerView']):
-    def __init__(self, page: int, total: int) -> None:
-        super().__init__(
-            label=f'Página {page + 1}/{total}',
-            style=discord.ButtonStyle.secondary,
-            disabled=True,
-            row=1,
+            embed=view.build_embed(),
+            view=view,
         )
 
 
 class _NextPageButton(discord.ui.Button['ConfigBannerView']):
     def __init__(self, *, disabled: bool) -> None:
         super().__init__(
-            label='Siguiente',
+            label='>',
             style=discord.ButtonStyle.secondary,
             disabled=disabled,
             row=1,
@@ -741,11 +732,12 @@ class _NextPageButton(discord.ui.Button['ConfigBannerView']):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         assert self.view is not None
-        self.view.page = min(len(_PAGE_TITLES) - 1, self.view.page + 1)
-        self.view.rebuild()
+        view = self.view
+        view.page = min(len(_PAGE_TITLES) - 1, view.page + 1)
+        view.rebuild()
         await interaction.response.edit_message(
-            embed=self.view.build_embed(),
-            view=self.view,
+            embed=view.build_embed(),
+            view=view,
         )
 
 
@@ -979,21 +971,20 @@ class ConfigBannerView(discord.ui.View):
         )
 
     def build_embed(self) -> discord.Embed:
-        title = _PAGE_TITLES[self.page]
         embed = discord.Embed(
-            title=f'Configuración de AeternumBot · {self.page + 1}/{len(_PAGE_TITLES)} · {title}',
+            title=_PAGE_TITLES[self.page],
             description=self._page_body(),
             colour=_EMBED_COLOUR,
         )
-        if self.status_notice:
-            embed.set_footer(text=self.status_notice)
+        page_label = f'Página {self.page + 1}/{len(_PAGE_TITLES)}'
+        footer_text = f'{page_label} · {self.status_notice}' if self.status_notice else page_label
+        embed.set_footer(text=footer_text)
         return embed
 
     def rebuild(self) -> None:
         self.clear_items()
         self.add_item(self._page_select())
         self.add_item(_PrevPageButton(disabled=self.page == 0))
-        self.add_item(_PageIndicatorButton(self.page, len(_PAGE_TITLES)))
         self.add_item(_NextPageButton(disabled=self.page == len(_PAGE_TITLES) - 1))
 
 
