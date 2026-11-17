@@ -105,19 +105,17 @@ async def _banner_embed(client: DisManagerClient, channel: discord.TextChannel) 
     whitelist_log = await get_or_create_thread('Whitelist Log', channel, public=True)
     server_log = await get_or_create_thread('Server Log', channel, public=True)
 
-    pad = ' ' * 41
+    server_block = (
+        f'||```prolog\n{mi_cfg.server_info.strip()}```||\n'
+        if mi_cfg.server_info.strip()
+        else '*Sin configurar*'
+    )
     return (
         discord.Embed(colour=0x2F3136)
         .add_field(
             name='> Información del servidor',
             inline=False,
-            value=(
-                '||```prolog\n'
-                f"{('Ip:' + pad)[:-len(mi_cfg.ip_server)]}{mi_cfg.ip_server}\n"
-                f"{('Ip Plugins:' + pad)[:-len(mi_cfg.ip_plugins)]}{mi_cfg.ip_plugins}\n"
-                f"{('Seed:' + pad)[:-len(mi_cfg.seed)]}{mi_cfg.seed}"
-                '```||\n'
-            ),
+            value=server_block,
         )
         .add_field(name='', inline=True, value=f'<#{announcements.id}>')
         .add_field(name='', inline=True, value=f'<#{whitelist_log.id}>')

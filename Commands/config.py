@@ -745,54 +745,23 @@ class DiscordInfoDetailsModal(_BaseConfigModal):
         }
 
 
-class MembersInfoMainModal(_BaseConfigModal):
+class MembersInfoModal(_BaseConfigModal):
     def __init__(self, banner_view: ConfigBannerView) -> None:
         super().__init__(
-            title='MembersInfo: Canal e IPs',
+            title='MembersInfo',
             banner_view=banner_view,
-            section_label='MembersInfo (Canal e IPs)',
+            section_label='MembersInfo',
         )
         mi = banner_view.cfg.members_info
         self.channel_select = _channel_select(
             mi.channel_id,
             channel_types=[discord.ChannelType.text],
         )
-        self.ip_server_input = _text_input(
-            default=mi.ip_server,
-            placeholder='mc.ejemplo.net',
-            max_length=150,
-        )
-        self.ip_plugins_input = _text_input(
-            default=mi.ip_plugins,
-            placeholder='plugins.ejemplo.net',
-            max_length=150,
-        )
-        self.add_item(discord.ui.Label(text='Canal MembersInfo', component=self.channel_select))
-        self.add_item(discord.ui.Label(text='IP Server', component=self.ip_server_input))
-        self.add_item(discord.ui.Label(text='IP Plugins', component=self.ip_plugins_input))
-
-    def build_updates(self) -> dict[str, Any]:
-        return {
-            'MembersInfo': {
-                'Channel ID': _selected_id(self.channel_select.values),
-                'IP Server': self.ip_server_input.value.strip(),
-                'IP Plugins': self.ip_plugins_input.value.strip(),
-            }
-        }
-
-
-class MembersInfoExtraModal(_BaseConfigModal):
-    def __init__(self, banner_view: ConfigBannerView) -> None:
-        super().__init__(
-            title='MembersInfo: Seed, PayPal & Twitch',
-            banner_view=banner_view,
-            section_label='MembersInfo (Extras)',
-        )
-        mi = banner_view.cfg.members_info
-        self.seed_input = _text_input(
-            default=mi.seed,
-            placeholder='Seed del mundo',
-            max_length=64,
+        self.server_info_input = _text_input(
+            default=mi.server_info,
+            placeholder='Ip:          mc.ejemplo.net\nIp Plugins:  plugins.ejemplo.net\nSeed:        123456',
+            max_length=1000,
+            style=discord.TextStyle.paragraph,
         )
         self.paypal_input = _text_input(
             default=mi.paypal_link,
@@ -804,14 +773,22 @@ class MembersInfoExtraModal(_BaseConfigModal):
             placeholder='live_...',
             max_length=200,
         )
-        self.add_item(discord.ui.Label(text='Seed', component=self.seed_input))
+        self.add_item(discord.ui.Label(text='Canal MembersInfo', component=self.channel_select))
+        self.add_item(
+            discord.ui.Label(
+                text='Información del servidor (prolog)',
+                description='Bloque completo tal como aparecerá en el banner.',
+                component=self.server_info_input,
+            )
+        )
         self.add_item(discord.ui.Label(text='Paypal Link', component=self.paypal_input))
         self.add_item(discord.ui.Label(text='Twitch Stream Key', component=self.twitch_input))
 
     def build_updates(self) -> dict[str, Any]:
         return {
             'MembersInfo': {
-                'Seed': self.seed_input.value.strip(),
+                'Channel ID': _selected_id(self.channel_select.values),
+                'Server Info': self.server_info_input.value.strip(),
                 'Paypal Link': self.paypal_input.value.strip(),
                 'Twitch Stream Key': self.twitch_input.value.strip(),
             }
@@ -1010,11 +987,10 @@ class ConfigBannerView(discord.ui.View):
                 f'- **Server Info (Host / Carpet / Mods):** {host_txt} / {rules_txt} / {mods_txt}'
             )
         mi = cfg.members_info
+        server_info_txt = '`Configurado`' if mi.server_info.strip() else '*Sin configurar*'
         return (
             f'- **Channel ID:** {_fmt_channel(mi.channel_id)}\n'
-            f'- **IP Server:** {_fmt_str(mi.ip_server)}\n'
-            f'- **IP Plugins:** {_fmt_str(mi.ip_plugins)}\n'
-            f'- **Seed:** {_fmt_str(mi.seed)}\n'
+            f'- **Server Info:** {server_info_txt}\n'
             f'- **Paypal Link:** {_fmt_str(mi.paypal_link)}\n'
             f'- **Twitch Stream Key:** {_fmt_str(mi.twitch_stream_key, spoiler=True)}'
         )
@@ -1145,19 +1121,13 @@ class ConfigBannerView(discord.ui.View):
         return _EditSectionSelect(
             [
                 discord.SelectOption(
-                    label='MembersInfo: Canal e IPs',
-                    value='members_main',
-                    description='Canal, IP Server e IP Plugins',
-                ),
-                discord.SelectOption(
-                    label='MembersInfo: Seed, PayPal & Twitch',
-                    value='members_extra',
-                    description='Seed, enlace PayPal y Twitch Stream Key',
+                    label='MembersInfo',
+                    value='members_info',
+                    description='Canal, Server Info, PayPal y Twitch Stream Key',
                 ),
             ],
             {
-                'members_main': MembersInfoMainModal,
-                'members_extra': MembersInfoExtraModal,
+                'members_info': MembersInfoModal,
             },
         )
 

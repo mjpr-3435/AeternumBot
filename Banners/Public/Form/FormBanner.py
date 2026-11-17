@@ -41,7 +41,7 @@ def form_banner_embed(client: DisManagerClient, lang: str = 'es') -> discord.Emb
                 name='`Builder`',
                 value=(
                     'Designs decorations in creative.\n'
-                    '[[Examples]](https://discord.com/channels/839325517529612348/846588514949922886)'
+                    '[[Examples]](https://discord.com/channels/839325517529612348/1423053488900014091)'
                 ),
                 inline=True,
             )
@@ -107,7 +107,7 @@ def form_banner_embed(client: DisManagerClient, lang: str = 'es') -> discord.Emb
                 name='`Builder`',
                 value=(
                     'Diseña decoraciones en creativo.\n'
-                    '[[Ejemplos]](https://discord.com/channels/839325517529612348/846588514949922886)'
+                    '[[Ejemplos]](https://discord.com/channels/839325517529612348/1423053488900014091)'
                 ),
                 inline=True,
             )

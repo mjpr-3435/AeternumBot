@@ -104,9 +104,7 @@ class MembersInfoConfig:
     """MembersInfo banner and server metadata settings."""
 
     channel_id: int
-    ip_server: str
-    ip_plugins: str
-    seed: str
+    server_info: str
     paypal_link: str
     twitch_stream_key: str
 
@@ -351,9 +349,7 @@ def _parse_members_info(data: Mapping[str, Any]) -> MembersInfoConfig:
     info = _require_mapping(data, 'MembersInfo')
     return MembersInfoConfig(
         channel_id=_require_int(info, 'Channel ID'),
-        ip_server=_require_str(info, 'IP Server'),
-        ip_plugins=_require_str(info, 'IP Plugins'),
-        seed=_require_str(info, 'Seed'),
+        server_info=_require_str(info, 'Server Info') if 'Server Info' in info else '',
         paypal_link=_require_str(info, 'Paypal Link'),
         twitch_stream_key=_require_str(info, 'Twitch Stream Key'),
     )
@@ -464,9 +460,7 @@ Tickets:
 
 MembersInfo:
   Channel ID: 0
-  IP Server: ''
-  IP Plugins: ''
-  Seed: ''
+  Server Info: ''
   Paypal Link: ''
   Twitch Stream Key: ''
 """
