@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import contextlib
+
 import discord
 from Classes.config import get_ae_config
 from discord import app_commands
@@ -7,7 +9,7 @@ from discord.ext import commands
 from dismanager.classes import DisManagerClient
 from Utils.discord_helpers import is_admin
 
-from .ShowcaseTools import default_post_text, ensure_showcase_post_menu, thread_name
+from .ShowcaseTools import ShowcasePostMenuView, default_post_text, thread_name
 
 
 class ShowcaseCommand(commands.Cog):
@@ -51,10 +53,12 @@ class ShowcaseCommand(commands.Cog):
         post_message = await channel.send(
             content=(text or '').strip() or default_post_text(title),
             file=await image.to_file(),
+            view=ShowcasePostMenuView(),
         )
         await post_message.create_thread(name=thread_name(title))
-        await post_message.add_reaction(ae_cfg.server_emoji)
-        await ensure_showcase_post_menu(post_message)
+        if ae_cfg.server_emoji.strip():
+            with contextlib.suppress(discord.HTTPException):
+                await post_message.add_reaction(ae_cfg.server_emoji)
 
         await interaction.followup.send(f'Post creado: {post_message.jump_url}', ephemeral=True)
 

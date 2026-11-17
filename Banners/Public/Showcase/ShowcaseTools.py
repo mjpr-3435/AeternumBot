@@ -14,7 +14,7 @@ SHOWCASE_MENU_ID = 'showcase:menu'
 def thread_name(title: str) -> str:
     """Format the extra-images thread title for a Showcase post."""
     cleaned = title.strip() or 'Showcase'
-    return f'{cleaned[:84]}: Imagenes Extra'
+    return f'{cleaned[:84]}: Imágenes Extra'
 
 
 def default_post_text(title: str) -> str:
