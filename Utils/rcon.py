@@ -32,9 +32,9 @@ def ensure_rcon_properties(
     properties_path: Path,
     *,
     password: str,
-    port_offset: int = 20,
+    port_offset: int = 3500,
 ) -> int | None:
-    """Ensure ``enable-rcon=true``, ``rcon.port=server-port+20``, and ``rcon.password`` exist.
+    """Ensure ``enable-rcon=true``, ``rcon.port=server-port+3500``, and ``rcon.password`` exist.
 
     Returns ``rcon_port`` if ``properties_path`` exists and defines ``server-port``, otherwise ``None``.
     """

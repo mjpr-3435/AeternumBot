@@ -50,7 +50,7 @@ class AeServer:
 
     def _configure_rcon(self) -> None:
         for candidate in (self.path / 'server.properties', self.path / 'server' / 'server.properties'):
-            rcon_port = ensure_rcon_properties(candidate, password=self.rcon_password, port_offset=20)
+            rcon_port = ensure_rcon_properties(candidate, password=self.rcon_password)
             if rcon_port is not None:
                 self.rcon_port = rcon_port
                 return
