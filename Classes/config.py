@@ -106,7 +106,7 @@ class MembersInfoConfig:
 
     channel_id: int
     server_info: str
-    paypal_link: str
+    donations: str
     twitch_stream_key: str
 
 
@@ -359,7 +359,7 @@ def _parse_members_info(data: Mapping[str, Any]) -> MembersInfoConfig:
     return MembersInfoConfig(
         channel_id=_require_int(info, 'Channel ID'),
         server_info=_require_str(info, 'Server Info') if 'Server Info' in info else '',
-        paypal_link=_require_str(info, 'Paypal Link'),
+        donations=_require_str(info, 'Donations') if 'Donations' in info else '',
         twitch_stream_key=_require_str(info, 'Twitch Stream Key'),
     )
 
@@ -471,6 +471,6 @@ Tickets:
 MembersInfo:
   Channel ID: 0
   Server Info: ''
-  Paypal Link: ''
+  Donations: ''
   Twitch Stream Key: ''
 """

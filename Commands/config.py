@@ -774,9 +774,9 @@ class MembersInfoModal(_BaseConfigModal):
             max_length=1000,
             style=discord.TextStyle.paragraph,
         )
-        self.paypal_input = _text_input(
-            default=mi.paypal_link,
-            placeholder='https://paypal.me/...',
+        self.donations_input = _text_input(
+            default=mi.donations,
+            placeholder='    💸 Donaciones: https://paypal.me/CubifyHosting    ',
             max_length=200,
         )
         self.twitch_input = _text_input(
@@ -792,7 +792,13 @@ class MembersInfoModal(_BaseConfigModal):
                 component=self.server_info_input,
             )
         )
-        self.add_item(discord.ui.Label(text='Paypal Link', component=self.paypal_input))
+        self.add_item(
+            discord.ui.Label(
+                text='Donations',
+                description='Cadena completa con espacios incluidos.',
+                component=self.donations_input,
+            )
+        )
         self.add_item(discord.ui.Label(text='Twitch Stream Key', component=self.twitch_input))
 
     def build_updates(self) -> dict[str, Any]:
@@ -800,7 +806,7 @@ class MembersInfoModal(_BaseConfigModal):
             'MembersInfo': {
                 'Channel ID': _selected_id(self.channel_select.values),
                 'Server Info': self.server_info_input.value.strip(),
-                'Paypal Link': self.paypal_input.value.strip(),
+                'Donations': self.donations_input.value,
                 'Twitch Stream Key': self.twitch_input.value.strip(),
             }
         }
@@ -1004,7 +1010,7 @@ class ConfigBannerView(discord.ui.View):
         return (
             f'- **Channel ID:** {_fmt_channel(mi.channel_id)}\n'
             f'- **Server Info:** {server_info_txt}\n'
-            f'- **Paypal Link:** {_fmt_str(mi.paypal_link)}\n'
+            f'- **Donations:** {_fmt_str(mi.donations)}\n'
             f'- **Twitch Stream Key:** {_fmt_str(mi.twitch_stream_key, spoiler=True)}'
         )
 
@@ -1136,7 +1142,7 @@ class ConfigBannerView(discord.ui.View):
                 discord.SelectOption(
                     label='MembersInfo',
                     value='members_info',
-                    description='Canal, Server Info, PayPal y Twitch Stream Key',
+                    description='Canal, Server Info, Donations y Twitch Stream Key',
                 ),
             ],
             {

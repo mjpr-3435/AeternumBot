@@ -125,7 +125,7 @@ async def _banner_embed(client: DisManagerClient, channel: discord.TextChannel) 
         .add_field(
             name='',
             inline=False,
-            value=f'`    💸 Donaciones: {mi_cfg.paypal_link}    `',
+            value=f'`{mi_cfg.donations}`' if mi_cfg.donations else '*Sin configurar*',
         )
         .add_field(
             name='> Reglas para miembros',
