@@ -730,8 +730,18 @@ class DiscordInfoDetailsModal(_BaseConfigModal):
             placeholder='https://discord.gg/...',
             max_length=200,
         )
+        self.open_apply_select: discord.ui.Select[Any] = discord.ui.Select(
+            options=[
+                discord.SelectOption(label='Abiertas', value='true', default=di.open_apply),
+                discord.SelectOption(label='Cerradas', value='false', default=not di.open_apply),
+            ],
+            min_values=1,
+            max_values=1,
+            required=True,
+        )
         self.add_item(discord.ui.Label(text='Foundation Date (YYYY-MM-DD)', component=self.foundation_input))
         self.add_item(discord.ui.Label(text='Invite URL', component=self.invite_input))
+        self.add_item(discord.ui.Label(text='Open Apply (Postulaciones)', component=self.open_apply_select))
 
     def build_updates(self) -> dict[str, Any]:
         foundation = self.foundation_input.value.strip()
@@ -741,6 +751,7 @@ class DiscordInfoDetailsModal(_BaseConfigModal):
             'DiscordInfo': {
                 'Foundation Date': foundation,
                 'Invite': self.invite_input.value.strip(),
+                'Open Apply': self.open_apply_select.values[0] == 'true',
             }
         }
 
@@ -967,6 +978,7 @@ class ConfigBannerView(discord.ui.View):
             di = cfg.discord_info
             forms = cfg.forms
             links_txt = f'`{len(di.links)} link(s)`' if di.links else '*Sin configurar*'
+            open_txt = '`Abiertas`' if di.open_apply else '`Cerradas`'
             host_txt = '`Configurado`' if di.host_info.strip() else '*Sin configurar*'
             rules_txt = '`Configurado`' if di.carpet_rules.strip() else '*Sin configurar*'
             mods_txt = '`Configurado`' if di.server_mods.strip() else '*Sin configurar*'
@@ -983,6 +995,7 @@ class ConfigBannerView(discord.ui.View):
                 f'- **Showcase ID:** {_fmt_channel(di.showcase_id)}\n'
                 f'- **Foundation Date:** {_fmt_str(di.foundation_date)}\n'
                 f'- **Invite:** {_fmt_str(di.invite)}\n'
+                f'- **Open Apply:** {open_txt}\n'
                 f'- **Links:** {links_txt}\n'
                 f'- **Server Info (Host / Carpet / Mods):** {host_txt} / {rules_txt} / {mods_txt}'
             )

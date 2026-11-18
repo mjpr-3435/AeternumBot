@@ -112,6 +112,7 @@ def banner_en_embed(
     thumbnail: str,
     version: str = '',
     links: tuple[str, ...] = (),
+    open_apply: bool = True,
 ) -> discord.Embed:
     """Build the English main DiscordInfo banner embed."""
     years, days = _active_duration_parts(foundation_date)
@@ -127,6 +128,9 @@ def banner_en_embed(
         else 'Unconfigured'
     )
     links_value = _format_links(links, discord_invite, empty_text='*No links configured*')
+    join_value = 'Certainly! Press the `Apply` button and follow the instructions.'
+    if not open_apply:
+        join_value += '\n`   Applications are currently closed.   `'
 
     return (
         discord.Embed(
@@ -140,7 +144,7 @@ def banner_en_embed(
         .add_field(
             name='Can I join Aeternum?',
             inline=False,
-            value='Certainly! Press the `Apply` button and follow the instructions.',
+            value=join_value,
         )
         .add_field(
             name='Do you use mods in Aeternum?',
@@ -186,6 +190,7 @@ def banner_es_embed(
     thumbnail: str,
     version: str = '',
     links: tuple[str, ...] = (),
+    open_apply: bool = True,
 ) -> discord.Embed:
     """Build the Spanish main DiscordInfo banner embed."""
     years, days = _active_duration_parts(foundation_date)
@@ -201,6 +206,9 @@ def banner_es_embed(
         else 'Sin configurar'
     )
     links_value = _format_links(links, discord_invite, empty_text='*Sin links configurados*')
+    join_value = '¡Claro! Presiona el botón `Apply` y sigue las indicaciones.'
+    if not open_apply:
+        join_value += '\n`   Actualmente no se admiten postulaciones.   `'
 
     return (
         discord.Embed(
@@ -214,7 +222,7 @@ def banner_es_embed(
         .add_field(
             name='¿Puedo entrar a Aeternum?',
             inline=False,
-            value='¡Claro! Presiona el botón `Apply` y sigue las indicaciones.',
+            value=join_value,
         )
         .add_field(
             name='¿Usan mods en Aeternum?',

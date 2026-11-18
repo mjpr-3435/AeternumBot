@@ -20,11 +20,14 @@ from .Embeds import (
 class BannerEnViews(discord.ui.View):
     """Ephemeral English DiscordInfo view."""
 
-    def __init__(self, server_emoji: str) -> None:
+    def __init__(self, server_emoji: str, *, open_apply: bool = True) -> None:
         super().__init__(timeout=900)
         for child in self.children:
-            if isinstance(child, discord.ui.Button) and child.label != 'Tickets':
-                child.emoji = server_emoji
+            if isinstance(child, discord.ui.Button):
+                if child.label == 'Tickets':
+                    child.disabled = not open_apply
+                elif server_emoji.strip():
+                    child.emoji = server_emoji
 
     @discord.ui.button(
         label='Server Info',
@@ -83,12 +86,15 @@ class BannerEnViews(discord.ui.View):
 class BannerEsViews(discord.ui.View):
     """Persistent Spanish DiscordInfo banner controls."""
 
-    def __init__(self, server_emoji: str) -> None:
+    def __init__(self, server_emoji: str, *, open_apply: bool = True) -> None:
         super().__init__(timeout=None)
         self._server_emoji = server_emoji
         for child in self.children:
-            if isinstance(child, discord.ui.Button) and child.custom_id != 'discord_info:tickets':
-                child.emoji = server_emoji
+            if isinstance(child, discord.ui.Button):
+                if child.custom_id == 'discord_info:tickets':
+                    child.disabled = not open_apply
+                elif server_emoji.strip():
+                    child.emoji = server_emoji
 
     @discord.ui.button(
         label='En',
@@ -109,9 +115,10 @@ class BannerEsViews(discord.ui.View):
                 thumbnail=ae_cfg.thumbnail,
                 version=ae_cfg.minecraft_version,
                 links=ae_cfg.discord_info.links,
+                open_apply=ae_cfg.discord_info.open_apply,
             ),
             ephemeral=True,
-            view=BannerEnViews(self._server_emoji),
+            view=BannerEnViews(self._server_emoji, open_apply=ae_cfg.discord_info.open_apply),
         )
 
     @discord.ui.button(

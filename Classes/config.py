@@ -92,6 +92,7 @@ class DiscordInfoConfig:
     channel_id: int
     foundation_date: str
     invite: str
+    open_apply: bool
     showcase_id: int
     links: tuple[str, ...]
     host_info: str
@@ -256,6 +257,13 @@ def _require_int(data: Mapping[str, Any], key: str) -> int:
     return value
 
 
+def _require_bool(data: Mapping[str, Any], key: str) -> bool:
+    value = data.get(key)
+    if not isinstance(value, bool):
+        raise AeternumConfigError(f"'{key}' must be a boolean.")
+    return value
+
+
 def _require_mapping(data: Mapping[str, Any], key: str) -> Mapping[str, Any]:
     value = data.get(key)
     if not isinstance(value, Mapping):
@@ -337,6 +345,7 @@ def _parse_discord_info(data: Mapping[str, Any]) -> DiscordInfoConfig:
         channel_id=_require_int(info, 'Channel ID'),
         foundation_date=_require_str(info, 'Foundation Date'),
         invite=_require_str(info, 'Invite'),
+        open_apply=_require_bool(info, 'Open Apply') if 'Open Apply' in info else True,
         showcase_id=_require_int(info, 'Showcase ID'),
         links=_require_str_tuple(info, 'Links') if 'Links' in info else (),
         host_info=_require_str(info, 'Host Info') if 'Host Info' in info else '',
@@ -443,6 +452,7 @@ DiscordInfo:
   Channel ID: 0
   Foundation Date: ''
   Invite: ''
+  Open Apply: true
   Showcase ID: 0
   Links: []
   Host Info: ''

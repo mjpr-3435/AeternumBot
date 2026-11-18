@@ -24,13 +24,14 @@ async def discord_creator(client: DisManagerClient, *, loop: bool = False) -> No
     while True:
         try:
             messages = [msg async for msg in channel.history(limit=None, oldest_first=True)]
-            view = BannerEsViews(ae_cfg.server_emoji)
+            view = BannerEsViews(ae_cfg.server_emoji, open_apply=discord_cfg.open_apply)
             embed = banner_es_embed(
                 discord_cfg.invite,
                 foundation_date=discord_cfg.foundation_date,
                 thumbnail=ae_cfg.thumbnail,
                 version=ae_cfg.minecraft_version,
                 links=discord_cfg.links,
+                open_apply=discord_cfg.open_apply,
             )
 
             if not messages:
