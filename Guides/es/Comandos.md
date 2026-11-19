@@ -31,10 +31,10 @@ Lo que mines se manda directo a tu inventario siempre.
 Alterna abrir shulkers directamente desde la mano al usarlas en el aire. Solo cambia tu preferencia; no afecta a otros jugadores.
 \yellow/quickenderchest\reset
 Alterna abrir el cofre de Ender directamente desde la mano al usarlo en el aire. Solo cambia tu preferencia.
-\yellow/find <ítem>\reset
-Busca el ítem en el almacenamiento registrado del servidor. Muestra los contenedores donde aparece, sus coordenadas y una ruta temporal con partículas.
-\yellow/count <ítem>\reset
-Cuenta cuántos ítems y stacks hay en el almacenamiento registrado, incluyendo contenido dentro de shulkers. No muestra ruta ni modifica inventarios.
+\yellow/find <lugar> <ítem>\reset
+Busca el ítem en el almacenamiento indicado (con autocompletado de lugar) o usa \yellownear_me\reset para buscar en un radio de 20 bloques a tu alrededor. Muestra los contenedores donde aparece, sus coordenadas y una ruta temporal con partículas.
+\yellow/count <lugar> <ítem>\reset
+Cuenta cuántos ítems y stacks hay en el almacenamiento indicado o en \yellownear_me\reset, incluyendo contenido dentro de shulkers. No muestra ruta ni modifica inventarios.
 \dark_grayConsulta la guía \whiteFinder\dark_gray para entender búsquedas, rutas, actualización de inventarios y zonas de almacenamiento.
 \yellow/guide\reset
 Abre la biblioteca de guías del servidor. Consulta \whiteGuides\reset para saber cómo se organiza y dónde encontrar cada tema.

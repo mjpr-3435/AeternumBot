@@ -70,6 +70,9 @@ Controla la aparición natural de phantoms.
 \dark_gray• \yellowmobcap\reset: los phantoms respetan el límite de mobs hostiles.
 \dark_gray• \yellowdisable\reset: no aparecen phantoms naturalmente.
 
+\yellowcraftableCalcite\reset — apagada por defecto
+Habilita el crafteo de 2 bloques de calcita en mesa de crafteo o crafter usando 4 fragmentos de amatista en las esquinas, 4 de cuarzo del Nether en los bordes y 1 basalto liso en el centro.
+
 —————————————————————————————————
 \aqua\boldMENSAJE DE BIENVENIDA Y TAREAS\reset
 —————————————————————————————————
@@ -199,20 +202,17 @@ El overlay del HUD muestra tus ítems claimados que todavía faltan; el conteo l
 
 \yellowcommandFinder\reset habilita Finder. Tiene dos niveles: consultas para todos y administración de zonas para OP. Finder no mueve ni modifica ítems. Cada consulta relee los contenedores antes de responder.
 
-\yellow/find <ítem>\reset — \greenPARA TODOS\reset
-Busca el ítem en la zona predeterminada. Muestra cada contenedor coincidente, cantidad y coordenadas; para un jugador también marca una ruta temporal con partículas y marcadores.
+\yellow/find <lugar> <ítem>\reset — \greenPARA TODOS\reset
+Busca el ítem en la zona indicada (con autocompletado de lugar) o en \yellownear_me\reset (radio de 20 bloques alrededor del jugador). Muestra cada contenedor coincidente, cantidad y coordenadas; para un jugador también marca una ruta temporal con partículas y marcadores.
 
-\yellow/count <ítem>\reset — \greenPARA TODOS\reset
-Cuenta el total y los stacks del ítem en la zona predeterminada, sin enviar la ruta de partículas.
+\yellow/count <lugar> <ítem>\reset — \greenPARA TODOS\reset
+Cuenta el total y los stacks del ítem en la zona indicada o en \yellownear_me\reset, sin enviar la ruta de partículas.
 
 \yellow/finder scan <coord1> <coord2> <nombre>\reset — \redSOLO OP\reset
-Crea o actualiza una zona. Solo se escanean hasta 256 chunks y 10 000 000 bloques. El escaneo progresa incrementalmente sin partículas de vista previa.
+Crea o actualiza una zona (el nombre solo admite letras a-z, A-Z y números 0-9). Solo se escanean hasta 256 chunks y 10 000 000 bloques. El escaneo progresa incrementalmente sin partículas de vista previa.
 
 \yellow/finder list\reset — \redSOLO OP\reset
-Lista las zonas. Incluye botones chat: D elige la predeterminada, ↻ vuelve a escanear y X elimina la zona.
-
-\yellow/finder default <nombre>\reset — \redSOLO OP\reset
-Elige la zona predeterminada para /find y /count.
+Lista las zonas. Incluye botones chat: ↻ vuelve a escanear y X elimina la zona.
 
 \yellow/finder remove <nombre>\reset — \redSOLO OP\reset
 Elimina una zona registrada.
@@ -225,6 +225,9 @@ Incluye o excluye un bloque de todas las zonas que lo contienen.
 
 \yellow/finder show_excludes\reset — \redSOLO OP\reset
 Muestra los bloques excluidos de cada zona.
+
+\yellow/finder clean\reset — \redSOLO OP\reset
+Elimina todas las entidades \yellowminecraft:block_display\reset cargadas y limpia marcadores temporales de Finder.
 
 —————————————————————————————————
 \aqua\boldPROTECCIÓN DE BLOQUES\reset

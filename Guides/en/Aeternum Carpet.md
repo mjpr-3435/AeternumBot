@@ -70,6 +70,9 @@ Controls natural phantom spawning.
 \dark_gray• \yellowmobcap\reset: phantoms respect the hostile mob cap.
 \dark_gray• \yellowdisable\reset: phantoms do not spawn naturally.
 
+\yellowcraftableCalcite\reset — disabled by default
+Enables crafting 2 calcite blocks in a crafting table or crafter using 4 amethyst shards in the corners, 4 nether quartz on the edges, and 1 smooth basalt in the center.
+
 —————————————————————————————————
 \aqua\boldWELCOME MESSAGE AND TASKS\reset
 —————————————————————————————————
@@ -199,20 +202,17 @@ The HUD overlay shows your claimed items still missing; the count is server-side
 
 \yellowcommandFinder\reset enables Finder. It has two levels: queries for everyone and area administration for OP. Finder does not move or modify items. Each query re-reads containers before responding.
 
-\yellow/find <item>\reset — \greenFOR EVERYONE\reset
-Searches for the item in the default area. Shows each matching container, quantity and coordinates; for a player also marks a temporary path with particles and markers.
+\yellow/find <place> <item>\reset — \greenFOR EVERYONE\reset
+Searches for the item in the indicated area (with place autocomplete) or in \yellownear_me\reset (20-block radius around the player). Shows each matching container, quantity and coordinates; for a player also marks a temporary path with particles and markers.
 
-\yellow/count <item>\reset — \greenFOR EVERYONE\reset
-Counts the total and stacks of the item in the default area, without sending the particle path.
+\yellow/count <place> <item>\reset — \greenFOR EVERYONE\reset
+Counts the total and stacks of the item in the indicated area or in \yellownear_me\reset, without sending the particle path.
 
 \yellow/finder scan <coord1> <coord2> <name>\reset — \redOP ONLY\reset
-Creates or updates an area. Only up to 256 chunks and 10,000,000 blocks are scanned. Scanning progresses incrementally without preview particles.
+Creates or updates an area (the name only allows letters a-z, A-Z and numbers 0-9). Only up to 256 chunks and 10,000,000 blocks are scanned. Scanning progresses incrementally without preview particles.
 
 \yellow/finder list\reset — \redOP ONLY\reset
-Lists areas. Includes chat buttons: D chooses the default, ↻ rescans and X deletes the area.
-
-\yellow/finder default <name>\reset — \redOP ONLY\reset
-Chooses the default area for /find and /count.
+Lists areas. Includes chat buttons: ↻ rescans and X deletes the area.
 
 \yellow/finder remove <name>\reset — \redOP ONLY\reset
 Deletes a registered area.
@@ -225,6 +225,9 @@ Includes or excludes a block from all areas containing it.
 
 \yellow/finder show_excludes\reset — \redOP ONLY\reset
 Shows excluded blocks for each area.
+
+\yellow/finder clean\reset — \redOP ONLY\reset
+Removes all loaded \yellowminecraft:block_display\reset entities and clears temporary Finder markers.
 
 —————————————————————————————————
 \aqua\boldBLOCK PROTECTION\reset

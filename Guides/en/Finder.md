@@ -1,6 +1,6 @@
 \gold\boldFINDER: SEARCH IN STORAGE\reset
 
-Finder allows locating and counting items within registered storage areas. It is a query tool: it does not move, consume or modify items. Administration defines the areas; any player can search in the default area.
+Finder allows locating and counting items within registered storage areas. It is a query tool: it does not move, consume or modify items. Administration defines the areas; any player can search in any registered area.
 
 The \yellowcommandFinder\reset rule must be active. Finder saves the areas, their dimension and exclusions in the world.
 
@@ -8,15 +8,15 @@ The \yellowcommandFinder\reset rule must be active. Finder saves the areas, thei
 \green\boldFOR EVERYONE: SEARCHING AND COUNTING\reset
 —————————————————————————————————
 
-\yellow/find <item>\reset
-Searches for the item in the default storage area. Shows each container that has it, with block type, coordinates and quantity. Also draws a temporary path with particles and markers to reach nearby matches.
+\yellow/find <place> <item>\reset
+Searches for the item in the indicated storage area (with place autocomplete). You can also use \yellownear_me\reset as the place to search containers within a 20-block radius around you without needing a registered area. Shows each container that has it, with block type, coordinates and quantity. Also draws a temporary path with particles and markers to reach nearby matches.
 
-\dark_grayExamples: /find redstone · /find ender chest · /find minecraft:iron_ingot
+\dark_grayExamples: /find MainStorage redstone · /find near_me stone · /find MainStorage ender chest
 
-\yellow/count <item>\reset
-Counts the total items and stacks of the item within the default area. It does not create markers or a path; it is the quick option when you only need to know how much there is.
+\yellow/count <place> <item>\reset
+Counts the total items and stacks of the item within the indicated area or in \yellownear_me\reset (20-block radius). It does not create markers or a path; it is the quick option when you only need to know how much there is.
 
-\dark_grayExample: /count firework rockets
+\dark_grayExamples: /count MainStorage firework rockets · /count near_me redstone
 
 Finder understands technical ids like \whiteminecraft:redstone\reset, names in Spanish and normal names with spaces. It is case-insensitive and normalizes accents when searching.
 
@@ -29,7 +29,7 @@ Finder understands technical ids like \whiteminecraft:redstone\reset, names in S
 \dark_gray• Items: total number of units.
 \dark_gray• Stacks: number of stacks containing that item.
 
-Shulkers are also checked internally, even when they are inside chests or other shulkers. For example, redstone stored inside a shulker placed in a chest does count for \yellow/find redstone\reset and \yellow/count redstone\reset.
+Shulkers are also checked internally, even when they are inside chests or other shulkers. For example, redstone stored inside a shulker placed in a chest does count for \yellow/find MainStorage redstone\reset and \yellow/count MainStorage redstone\reset.
 
 \aqua\boldWHEN THE RESULT UPDATES\reset
 
@@ -47,23 +47,19 @@ Shows a brief reminder of Finder administration commands.
 \yellow/finder scan <coord1> <coord2> <name>\reset
 Creates a new area or rescans an existing one. The cube includes all blocks between both coordinates and is saved in the current dimension.
 
-\dark_grayExample: /finder scan 0 50 0 127 100 127 main_storage
+\dark_grayExample: /finder scan 0 50 0 127 100 127 MainStorage
 
-The name must use lowercase, numbers, _ or -. An area supports a maximum of 10,000,000 blocks and 256 chunks, equivalent at most to a 16 × 16 chunk grid. Use a tight selection: scanning a huge area loads more chunks and takes longer, even if done gradually.
+The name must use only letters (a-z, A-Z) and numbers (0-9), with no spaces or symbols. An area supports a maximum of 10,000,000 blocks and 256 chunks, equivalent at most to a 16 × 16 chunk grid. Use a tight selection: scanning a huge area loads more chunks and takes longer, even if done gradually.
 
 The scan checks one full chunk per tick and sends progress to the OP who requested the scan approximately every two seconds. When finished it reports how many containers it found.
 
 Finder recognizes chests, trapped chests, barrels, dispensers, droppers and all placed shulkers. Other inventories, such as hoppers, are not currently included: use \yellow/finder check\reset if you have doubts about a block.
 
 \yellow/finder list\reset
-Shows all saved areas, their dimension and number of containers. The default area appears marked. Each line includes chat buttons:
+Shows all saved areas, their dimension and number of containers. Each line includes chat buttons:
 
-\dark_gray• D: make that area the default.
 \dark_gray• ↻: rescan it with the same coordinates.
 \dark_gray• X: delete it.
-
-\yellow/finder default <name>\reset
-Defines the only area used by \yellow/find\reset and \yellow/count\reset for all players. If the default area is deleted or does not exist, queries cannot respond until another is chosen.
 
 \yellow/finder remove <name>\reset
 Removes the area from the registry. It does not break chests or change blocks; it just stops being used in Finder.
@@ -81,6 +77,9 @@ Excludes or re-includes that block from all registered areas containing it. With
 \yellow/finder show_excludes\reset
 Lists excluded positions, grouped by area.
 
+\yellow/finder clean\reset
+Removes all loaded \whiteminecraft:block_display\reset entities and clears Finder's temporary paths and markers. Useful if a marker was left behind after a restart or chunk unload.
+
 Exclusions persist and are respected when rescanning. If the same position belongs to more than one area, \yellowtoggle-block\reset changes its status in all of them; check \yellowshow_excludes\reset if you work with overlapping areas.
 
 —————————————————————————————————
@@ -92,10 +91,10 @@ Rescan an area when chests, barrels, placed shulkers or any storage structure ar
 Normal inventory changes appear in the next search. For structural changes, use the ↻ button from \yellow/finder list\reset or repeat \yellow/finder scan\reset with the same coordinates and name.
 
 \dark_grayRecommended workflow:
-\dark_gray1. Scan each warehouse with a clear name.
-\dark_gray2. Check the area with /finder list and set the default.
-\dark_gray3. Test /find and /count with a known item.
+\dark_gray1. Scan each warehouse with a clear name (letters and numbers only).
+\dark_gray2. Check the areas with /finder list.
+\dark_gray3. Test /find <place> and /count <place> with a known item.
 \dark_gray4. Exclude chests that should not participate.
 \dark_gray5. Rescan after expanding or redesigning the storage.
 
-Finder works best with a well-maintained default area, not with a selection that tries to cover all the chests on the server.
+Finder works best with well-defined areas per warehouse, not with a selection that tries to cover all the chests on the server.

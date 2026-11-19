@@ -31,10 +31,10 @@ What you mine goes directly to your inventory always.
 Toggles opening shulkers directly from your hand when used in the air. Only changes your preference; does not affect other players.
 \yellow/quickenderchest\reset
 Toggles opening the Ender chest directly from your hand when used in the air. Only changes your preference.
-\yellow/find <item>\reset
-Searches for the item in the server's registered storage. Shows the containers where it appears, their coordinates and a temporary path with particles.
-\yellow/count <item>\reset
-Counts how many items and stacks are in the registered storage, including content inside shulkers. Does not show a path or modify inventories.
+\yellow/find <place> <item>\reset
+Searches for the item in the indicated storage area (with place autocomplete) or use \yellownear_me\reset to search within a 20-block radius around you. Shows the containers where it appears, their coordinates and a temporary path with particles.
+\yellow/count <place> <item>\reset
+Counts how many items and stacks are in the indicated storage area or in \yellownear_me\reset, including content inside shulkers. Does not show a path or modify inventories.
 \dark_graySee the \whiteFinder\dark_gray guide to understand searches, paths, inventory updates and storage areas.
 \yellow/guide\reset
 Opens the server guide library. See \whiteGuides\reset to learn how it is organized and where to find each topic.
