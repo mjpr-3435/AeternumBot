@@ -22,7 +22,7 @@ def hover(text: str, *, color: str = 'gray', hover: str) -> str:
         'color': color,
         'hover_event': {'action': 'show_text', 'value': hover},
     }
-    return json.dumps(payload, ensure_ascii=False)
+    return json.dumps(payload)
 
 
 def hover_and_suggest(text: str, *, color: str = 'gray', suggest: str, hover: str) -> str:
@@ -33,7 +33,7 @@ def hover_and_suggest(text: str, *, color: str = 'gray', suggest: str, hover: st
         'click_event': {'action': 'suggest_command', 'command': suggest},
         'hover_event': {'action': 'show_text', 'value': hover},
     }
-    return json.dumps(payload, ensure_ascii=False)
+    return json.dumps(payload)
 
 
 def hover_and_run(text: str, *, color: str = 'gray', command: str, hover: str) -> str:
@@ -44,4 +44,4 @@ def hover_and_run(text: str, *, color: str = 'gray', command: str, hover: str) -
         'click_event': {'action': 'run_command', 'command': command},
         'hover_event': {'action': 'show_text', 'value': hover},
     }
-    return json.dumps(payload, ensure_ascii=False)
+    return json.dumps(payload)

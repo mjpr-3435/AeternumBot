@@ -203,7 +203,7 @@ class AeServer:
         """Send one or more colored ``tellraw`` messages to ``target``."""
         lines = [message] if isinstance(message, str) else message
         for msg in lines:
-            payload = json.dumps({'text': msg, 'color': colour}, ensure_ascii=False)
+            payload = json.dumps({'text': msg, 'color': colour})
             self.execute(f'tellraw {target} {payload}')
 
     def is_command(self, message: str, command: str) -> bool:

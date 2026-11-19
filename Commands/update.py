@@ -211,7 +211,7 @@ class UpdateAddonsView(discord.ui.LayoutView):
             f'- **Último commit:** `{commit.sha}` · {commit.author}\n'
             f'- **Fecha:** {_format_commit_date(commit.date_iso)}\n'
             f'- **Mensaje:** {commit.message}\n\n'
-            f'> Se preservarán `config.yml`, `.legacy/` y todos los registros locales (`.json` / `.csv`).'
+            f'> Se preservarán `config.yml` y todos los registros locales (`.json` / `.csv`).'
         )
         self.add_item(
             discord.ui.Container(
