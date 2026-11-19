@@ -19,6 +19,9 @@ Muestra el valor y la descripción de una regla concreta.
 \yellow/carpet list aeternum\reset — \redSOLO OP\reset
 Muestra todas las reglas añadidas por Aeternum Carpet.
 
+\yellow/rules\reset — \redSOLO OP\reset
+Abre la interfaz visual para ver, buscar, filtrar y editar todas las reglas de Carpet y de sus extensiones, incluyendo restaurar al valor por defecto y guardar en la configuración del servidor. Requiere el cliente Aeternum Carpet.
+
 Los cambios se guardan en la configuración de Carpet del servidor. Por defecto están activadas \yellowjoinMotd\reset, \yellownaturalIceFormation\reset y \yellowallowPlayerExploration\reset. Las herramientas de comandos y \yellowexplorationManager\reset empiezan apagadas.
 
 —————————————————————————————————

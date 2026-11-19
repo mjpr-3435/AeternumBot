@@ -36,7 +36,6 @@ _PROTECTED_FILES = frozenset(
         'Banners/MembersInfo/Whitelist/WhitelistLog.csv',
         'Banners/Public/Form/forms.json',
         'Banners/Public/TicketSystem/tickets.json',
-        'MaterialLists/data.json',
     }
 )
 

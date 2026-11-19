@@ -19,6 +19,9 @@ Shows the value and description of a specific rule.
 \yellow/carpet list aeternum\reset — \redOP ONLY\reset
 Shows all rules added by Aeternum Carpet.
 
+\yellow/rules\reset — \redOP ONLY\reset
+Opens the visual interface to browse, search, filter and edit all Carpet rules and its extensions, including resetting to default and saving to the server configuration. Requires the Aeternum Carpet client.
+
 Changes are saved in the server's Carpet configuration. By default \yellowjoinMotd\reset, \yellownaturalIceFormation\reset and \yellowallowPlayerExploration\reset are enabled. Command tools and \yellowexplorationManager\reset start disabled.
 
 —————————————————————————————————
