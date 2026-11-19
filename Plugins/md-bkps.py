@@ -51,10 +51,10 @@ class plugin(BasePlugin):
 
     async def on_mc_player_command(self, player: str, message: str) -> None:
         if self.server.is_command(message, 'mdhelp'):
-            self.server.show_command(player, 'bk help | bk', 'Muestra los comandos del backup manager.')
+            self.server.show_command(player, 'bk help', 'Muestra los comandos del backup manager.')
             return
 
-        if self.server.is_command(message, 'bk') or self.server.is_command(message, 'bk help'):
+        if self.server.is_command(message, 'bk help'):
             self.server.show_command(player, 'bkps', 'Lista los backups del servidor.')
             self.server.show_command(player, 'mk-bkp <comment | default : None>', 'Crea un backup.')
             if player not in self.server.admins:
