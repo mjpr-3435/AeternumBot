@@ -9,7 +9,9 @@ Administration must enable \yellowcommandPerimeters\reset with Carpet. Discord n
 —————————————————————————————————
 
 \yellow/perimeter\reset — \redOP ONLY\reset
-Opens the visual screen (\yellowPerimetersScreen\reset) to review registered perimeters, check current progress, adjust target Y or stall timeout, and control the bot grid. Requires the Aeternum Carpet client.
+Opens the visual screen (\yellowPerimetersScreen\reset) to review registered perimeters, edit region bounds (\yellowRegión\reset, keeping the initial reference with \yellowRestaurar\reset), start or \yellowCancelar\reset scans, adjust target Y or stall timeout, and control the bot grid. Requires the Aeternum Carpet client.
+
+When a completed scan exists and palette blocks are created or broken inside the area, the button displays \yellowUpdate (N)\reset and re-scans only those modified chunks.
 
 \yellow/perimeter add <name> <x1> <z1> <x2> <z2>\reset — \redOP ONLY\reset
 Registers a new rectangular perimeter between both X/Z coordinates.

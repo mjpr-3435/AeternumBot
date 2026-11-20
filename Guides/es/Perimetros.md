@@ -9,7 +9,9 @@ Para que exista el sistema, administración debe activar \yellowcommandPerimeter
 —————————————————————————————————
 
 \yellow/perimeter\reset — \redSOLO OP\reset
-Abre la pantalla visual (\yellowPerimetersScreen\reset) para consultar perímetros registrados, ver su progreso actual, ajustar la Y objetivo o el timeout de estancamiento y controlar la grilla de bots. Requiere el cliente Aeternum Carpet.
+Abre la pantalla visual (\yellowPerimetersScreen\reset) para consultar perímetros registrados, editar los límites de la región (\yellowRegión\reset, conservando la referencia inicial y permitiendo \yellowRestaurar\reset), iniciar o \yellowCancelar\reset análisis, ajustar la Y objetivo o el timeout de estancamiento y controlar la grilla de bots. Requiere el cliente Aeternum Carpet.
+
+Cuando ya existe un escaneo completo y se generan o rompen bloques de la paleta dentro del área, el botón muestra \yellowUpdate (N)\reset y al pulsarlo re-escanea únicamente esos chunks modificados.
 
 \yellow/perimeter add <nombre> <x1> <z1> <x2> <z2>\reset — \redSOLO OP\reset
 Registra un nuevo perímetro rectangular entre ambas coordenadas X/Z.
