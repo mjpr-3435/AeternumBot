@@ -3,7 +3,7 @@
 > [!WARNING]
 > **Aviso importante / Úsalo bajo tu propio riesgo**
 >
-> Este proyecto fue desarrollado íntegramente por **Gemini 4 Hydrogen** a partir de indicaciones, ideas y pruebas del autor (sin programación manual directa).
+> Este proyecto ya existía previamente y fue **porteado y adaptado a DisManager por Gemini 4 Hydrogen** a partir del código original e indicaciones del autor.
 >
 > Se publica tal cual está: **úsalo bajo tu propio riesgo**. Puede contener errores, bugs o comportamientos inesperados.
 
