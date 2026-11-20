@@ -72,7 +72,7 @@ class plugin(BasePlugin):
         self.whitelisted_players = self._load_whitelist()
 
     async def on_process_log(self, log: str) -> None:
-        if 'INFO]:' in log and log.endswith('Saved the game') and self.waiting:
+        if 'INFO]:' in log and log.rstrip().endswith('Saved the game') and self.waiting:
             self.waiting = False
 
     async def on_mc_player_command(self, player: str, message: str) -> None:
@@ -342,12 +342,12 @@ class plugin(BasePlugin):
                 self.server.send_response(player, 'No hay md-bkps disponibles.')
                 return
             self.server.send_response(player, 'Md-bkps disponibles:')
-            for entry in sorted(backups.values(), key=lambda item: item.name):
-                creation_time = datetime.fromtimestamp(entry.path.stat().st_ctime)
+            for entry in backups.values():
+                date_str = entry.created_at or datetime.fromtimestamp(entry.path.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
                 cmd = f'{self.server.prefix}rb load-md {entry.name}'
                 components = [
                     hover_and_suggest('[>] ', color='green', suggest=cmd, hover='Load regions from md-bkp'),
-                    json.dumps({'text': f'{entry.name} [{creation_time.strftime("%Y-%m-%d %H:%M:%S")}]'}),
+                    json.dumps({'text': f'{entry.name} [{date_str}]'}),
                 ]
                 self.server.execute(f'tellraw {player} {extras(components)}')
             return
@@ -528,7 +528,12 @@ class plugin(BasePlugin):
                             zipf.write(file_path, os.path.join(folder, reg))
                     log_content.append(f'{dim} : {reg}')
 
-            log_text = f'Backup realizado por: {player}\nArchivos respaldados:\n' + '\n'.join(log_content)
+            now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            log_text = (
+                f'Backup realizado por: {player}\n'
+                f'Fecha: {now_str}\n'
+                f'Archivos respaldados:\n' + '\n'.join(log_content)
+            )
             zipf.writestr('bkp_log.txt', log_text)
 
     @staticmethod
@@ -584,7 +589,23 @@ class plugin(BasePlugin):
     def _get_md_bkps(self) -> list[BackupEntry]:
         if not self._has_md_bkps():
             return []
-        return sorted(self.process.list_backups(), key=lambda entry: entry.name)
+        entries = list(self.process.list_backups())
+        auto_idx = self.process.client.config.backups + 1
+        auto_path = self.process.backups_dir / f'{self.process.name} {auto_idx}'
+        auto_log = auto_path / 'backup_log.txt'
+        if auto_path.is_dir() and auto_log.is_file():
+            created_at = ''
+            for line in auto_log.read_text(encoding='utf-8', errors='replace').splitlines():
+                if line.startswith('Backup created on:'):
+                    created_at = line.removeprefix('Backup created on:').strip()
+                    break
+            entries.append(BackupEntry(name=auto_path.name, path=auto_path, created_at=created_at, size_bytes=0))
+
+        def _sort_key(e: BackupEntry) -> tuple[int, str]:
+            suffix = e.name.removeprefix(f'{self.process.name} ')
+            return (int(suffix), '') if suffix.isdigit() else (999999, e.name)
+
+        return sorted(entries, key=_sort_key)
 
     def _has_regions_selected(self, player: str) -> bool:
         return any(self.files_to_zip[player][dim] for dim in _DIMS)
@@ -617,16 +638,8 @@ class plugin(BasePlugin):
         now = datetime.now()
 
         for zip_path in zips:
-            creation_time = datetime.fromtimestamp(zip_path.stat().st_ctime)
-            time_diff = now - creation_time
-            if time_diff.days > 0:
-                time_ago = f'Hace {time_diff.days} días'
-            elif time_diff.seconds >= 3600:
-                time_ago = f'Hace {time_diff.seconds // 3600} horas'
-            elif time_diff.seconds >= 60:
-                time_ago = f'Hace {time_diff.seconds // 60} minutos'
-            else:
-                time_ago = 'Hace unos segundos'
+            creation_time = self._read_zip_datetime(zip_path)
+            time_ago = self._format_time_ago(creation_time, now)
 
             log_info = self._format_zip_hover(zip_path)
             stem = zip_path.stem
@@ -655,18 +668,57 @@ class plugin(BasePlugin):
             self.server.execute(f'tellraw {player} {extras(components)}')
 
     @staticmethod
+    def _read_zip_datetime(zip_path: Path) -> datetime:
+        try:
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                if 'bkp_log.txt' in zip_ref.namelist():
+                    lines = zip_ref.read('bkp_log.txt').decode('utf-8', errors='replace').splitlines()
+                    for line in lines:
+                        if line.startswith('Fecha:'):
+                            raw = line.removeprefix('Fecha:').strip()
+                            try:
+                                return datetime.strptime(raw, '%Y-%m-%d %H:%M:%S')
+                            except ValueError:
+                                pass
+        except Exception:
+            pass
+        return datetime.fromtimestamp(zip_path.stat().st_mtime)
+
+    @staticmethod
+    def _format_time_ago(dt: datetime, now: datetime) -> str:
+        seconds = int((now - dt).total_seconds())
+        if seconds < 60:
+            return 'Hace unos segundos'
+        days = seconds // 86400
+        if days > 0:
+            return f'Hace {days} día' if days == 1 else f'Hace {days} días'
+        hours = seconds // 3600
+        if hours > 0:
+            return f'Hace {hours} hora' if hours == 1 else f'Hace {hours} horas'
+        mins = seconds // 60
+        return f'Hace {mins} minuto' if mins == 1 else f'Hace {mins} minutos'
+
+    @staticmethod
     def _format_zip_hover(zip_path: Path) -> str:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:
             if 'bkp_log.txt' not in zip_ref.namelist():
                 return 'Sin registro.'
             lines = zip_ref.read('bkp_log.txt').decode('utf-8', errors='replace').splitlines()
 
-        if len(lines) > 2:
-            author = lines[0].removeprefix('Backup realizado por: ').strip()
-            regions_log = ' | '.join(lines[2:])
-            return f'Hecho por: {author} | {regions_log}'
-        if len(lines) > 1:
-            author = lines[0].removeprefix('Backup realizado por: ').strip()
+        author: str | None = None
+        regions: list[str] = []
+        in_regions = False
+        for line in lines:
+            if line.startswith('Backup realizado por:'):
+                author = line.removeprefix('Backup realizado por:').strip()
+            elif line.startswith('Archivos respaldados:'):
+                in_regions = True
+            elif in_regions and line.strip():
+                regions.append(line.strip())
+
+        if author and regions:
+            return f'Hecho por: {author} | {" | ".join(regions)}'
+        if author:
             return f'Hecho por: {author}'
         return 'Sin registro de autor.'
 

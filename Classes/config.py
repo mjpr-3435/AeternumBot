@@ -69,6 +69,14 @@ class WorldTrimmerConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class WorldEaterConfig:
+    """World Eater Discord alert channel and DM settings."""
+
+    channel_id: int
+    allow_dm: bool
+
+
+@dataclass(frozen=True, slots=True)
 class HoneyPotConfig:
     """HoneyPot moderation and logging settings."""
 
@@ -127,6 +135,7 @@ class AeternumConfig:
     tickets: TicketsConfig
     forms: FormsConfig
     world_trimmer: WorldTrimmerConfig
+    world_eater: WorldEaterConfig
     honeypot: HoneyPotConfig
     interviewers_info: InterviewersInfoConfig
     discord_info: DiscordInfoConfig
@@ -193,6 +202,7 @@ def save_aeternum_config_updates(path: Path, updates: Mapping[str, Any]) -> Aete
 
 
 def _build_aeternum_config(raw: Mapping[str, Any]) -> AeternumConfig:
+    chatbridge = _parse_chatbridge(raw)
     return AeternumConfig(
         rcon_password=_require_str(raw, 'RCON Password'),
         minecraft_version=_require_str(raw, 'Minecraft Version') if 'Minecraft Version' in raw else '',
@@ -202,11 +212,12 @@ def _build_aeternum_config(raw: Mapping[str, Any]) -> AeternumConfig:
         admins=_require_str_tuple(raw, 'Admins'),
         servers=_require_str_tuple(raw, 'Servers'),
         guide_targets=_require_str_tuple(raw, 'Guide Targets'),
-        chatbridge=_parse_chatbridge(raw),
+        chatbridge=chatbridge,
         tts=_parse_tts(raw),
         tickets=_parse_tickets(raw),
         forms=_parse_forms(raw),
         world_trimmer=_parse_world_trimmer(raw),
+        world_eater=_parse_world_eater(raw, chatbridge.channel_id),
         honeypot=_parse_honeypot(raw),
         interviewers_info=_parse_interviewers_info(raw),
         discord_info=_parse_discord_info(raw),
@@ -322,6 +333,19 @@ def _parse_world_trimmer(data: Mapping[str, Any]) -> WorldTrimmerConfig:
     )
 
 
+def _parse_world_eater(data: Mapping[str, Any], default_channel_id: int) -> WorldEaterConfig:
+    raw_we = data.get('WorldEater')
+    if raw_we is None:
+        return WorldEaterConfig(channel_id=default_channel_id, allow_dm=True)
+    if not isinstance(raw_we, Mapping):
+        raise AeternumConfigError("'WorldEater' must be a YAML mapping.")
+    ch_id = _require_int(raw_we, 'Channel ID') if 'Channel ID' in raw_we else 0
+    return WorldEaterConfig(
+        channel_id=ch_id if ch_id > 0 else default_channel_id,
+        allow_dm=_require_bool(raw_we, 'Allow DM') if 'Allow DM' in raw_we else True,
+    )
+
+
 def _parse_honeypot(data: Mapping[str, Any]) -> HoneyPotConfig:
     hp = _require_mapping(data, 'HoneyPot')
     return HoneyPotConfig(
@@ -420,8 +444,14 @@ Guide Targets: []
 WorldTrimmer:
   Operator: ''
 
+WorldEater:
+  Channel ID: 0
+  Allow DM: true
+
 # Plugins copiados a <proceso>/.plugins/ al cargar el addon
-Plugins: {}
+Plugins:
+  SMP:
+    - world-eater.py
 
 # =========================================
 #              Comunicación

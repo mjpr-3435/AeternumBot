@@ -46,7 +46,7 @@ class plugin(BasePlugin):
             self.auto_task.cancel()
 
     async def on_process_log(self, log: str) -> None:
-        if 'INFO]:' in log and log.endswith('Saved the game') and self.waiting:
+        if 'INFO]:' in log and log.rstrip().endswith('Saved the game') and self.waiting:
             self.waiting = False
 
     async def on_mc_player_command(self, player: str, message: str) -> None:
@@ -85,7 +85,7 @@ class plugin(BasePlugin):
                 self.server.send_response(player, '✖ Comando reservado solo para administradores.')
             return
 
-        backups_by_name = {entry.name: entry for entry in self.process.list_backups()}
+        backups_by_name = {entry.name: entry for entry in self._list_all_backups()}
 
         if self.server.is_command(message, 'load-bkp'):
             backup_name = message.removeprefix(f'{self.server.prefix}load-bkp').strip()
@@ -201,7 +201,6 @@ class plugin(BasePlugin):
 
         self.creating_backup = True
         auto_path = self._get_auto_backup_path()
-        log_path = self.process.path / 'backup_log.txt'
         discord_message = await self.process.send_to_console('[md-bkps]: Creating automatic backup...')
         counter = [0, 0]
 
@@ -222,18 +221,14 @@ class plugin(BasePlugin):
             def _job() -> None:
                 if auto_path.exists():
                     shutil.rmtree(auto_path)
-                log_path.write_text(
-                    f'Backup created on: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}\n',
+                copy_tree_with_progress(self.process.path, auto_path, on_progress)
+                auto_log = auto_path / 'backup_log.txt'
+                auto_log.write_text(
+                    f'Backup created on: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}\n'
+                    'Backup created by: auto\n'
+                    'Comment: auto\n',
                     encoding='utf-8',
                 )
-                try:
-                    copy_tree_with_progress(self.process.path, auto_path, on_progress)
-                    auto_log = auto_path / 'backup_log.txt'
-                    with auto_log.open('a', encoding='utf-8') as file:
-                        file.write('Backup created by: auto\n')
-                        file.write('Comment: auto\n')
-                finally:
-                    log_path.unlink(missing_ok=True)
 
             task = asyncio.create_task(asyncio.to_thread(_job))
             while not task.done():
@@ -276,7 +271,6 @@ class plugin(BasePlugin):
             self.process.execute('save-on')
             self.creating_backup = False
             self.waiting = False
-            log_path.unlink(missing_ok=True)
 
     async def _make_bkp(self, player: str, comment: str | None = None) -> None:
         self.creating_backup = True
@@ -352,24 +346,57 @@ class plugin(BasePlugin):
 
         metadata: list[dict[str, Any]] = []
         for entry in manual:
-            date = self._read_backup_datetime(entry.path) or datetime.min
+            date = self._read_backup_datetime(entry.path) or datetime.fromtimestamp(entry.path.stat().st_mtime)
             author = self._read_backup_author(entry.path)
             is_admin = author is None or author in self.server.admins
             metadata.append({'entry': entry, 'date': date, 'is_admin': is_admin})
 
         admin_backups = [m for m in metadata if m['is_admin']]
-        if not admin_backups:
-            return
-
-        latest_admin = max(admin_backups, key=lambda item: item['date'])
         ordered = sorted(metadata, key=lambda item: item['date'])
-        candidates = [m for m in ordered if m['entry'].name != latest_admin['entry'].name]
-        if candidates:
-            shutil.rmtree(candidates[0]['entry'].path)
+        if admin_backups:
+            latest_admin = max(admin_backups, key=lambda item: item['date'])
+            candidates = [m for m in ordered if m['entry'].name != latest_admin['entry'].name]
+            victim = candidates[0] if candidates else ordered[0]
+        else:
+            victim = ordered[0]
+
+        shutil.rmtree(victim['entry'].path)
+
+        # Compact remaining manual backups to 1..(limit-1) so DisManager's make_backup()
+        # shifts them cleanly to 2..limit without deleting the protected admin backup.
+        survivors = [m for m in reversed(ordered) if m is not victim]
+        temp_paths: list[Path] = []
+        for idx, item in enumerate(survivors, start=1):
+            src: Path = item['entry'].path
+            tmp = self.process.backups_dir / f'.__tmp_rot_{self.process.name}_{idx}'
+            if tmp.exists():
+                shutil.rmtree(tmp)
+            src.rename(tmp)
+            temp_paths.append(tmp)
+        for idx, tmp in enumerate(temp_paths, start=1):
+            dest = self.process.backups_dir / f'{self.process.name} {idx}'
+            if dest.exists():
+                shutil.rmtree(dest)
+            tmp.rename(dest)
 
     def _get_auto_backup_path(self) -> Path:
         auto_index = self.process.client.config.backups + 1
         return self.process.backups_dir / f'{self.process.name} {auto_index}'
+
+    def _list_all_backups(self) -> list[BackupEntry]:
+        entries = list(self.process.list_backups())
+        auto_path = self._get_auto_backup_path()
+        auto_log = auto_path / 'backup_log.txt'
+        if auto_path.is_dir() and auto_log.is_file():
+            dt = self._read_backup_datetime(auto_path)
+            created_at = dt.strftime('%Y-%m-%d %H:%M:%S') if dt else ''
+            entries.append(BackupEntry(name=auto_path.name, path=auto_path, created_at=created_at, size_bytes=0))
+
+        def _sort_key(e: BackupEntry) -> tuple[int, str]:
+            suffix = e.name.removeprefix(f'{self.process.name} ')
+            return (int(suffix), '') if suffix.isdigit() else (999999, e.name)
+
+        return sorted(entries, key=_sort_key)
 
     def _get_manual_backups(self) -> list[BackupEntry]:
         limit = self.process.client.config.backups
@@ -410,28 +437,41 @@ class plugin(BasePlugin):
                 return line.removeprefix('Backup created by:').strip()
         return None
 
+    @staticmethod
+    def _format_time_ago(dt: datetime, now: datetime) -> str:
+        seconds = int((now - dt).total_seconds())
+        if seconds < 60:
+            return 'Hace unos segundos'
+        days = seconds // 86400
+        if days > 0:
+            return f'Hace {days} día' if days == 1 else f'Hace {days} días'
+        hours = seconds // 3600
+        if hours > 0:
+            return f'Hace {hours} hora' if hours == 1 else f'Hace {hours} horas'
+        mins = seconds // 60
+        return f'Hace {mins} minuto' if mins == 1 else f'Hace {mins} minutos'
+
     def _show_bkps(self, player: str) -> None:
-        backups = sorted(self.process.list_backups(), key=lambda entry: entry.name)
+        backups = self._list_all_backups()
         if not backups:
             self.server.send_response(player, 'No se han creado backups.')
             return
 
         self.server.send_response(player, 'Backups disponibles:')
+        now = datetime.now()
+        auto_name = self._get_auto_backup_path().name
+
         for entry in backups:
-            date = 'Date not found in log'
+            dt = self._read_backup_datetime(entry.path) or datetime.fromtimestamp(entry.path.stat().st_mtime)
+            date = dt.strftime('%Y-%m-%d %H:%M:%S')
+            time_ago = self._format_time_ago(dt, now)
             comment: str | None = None
             author: str | None = None
 
             log_file = entry.path / 'backup_log.txt'
             if log_file.is_file():
                 for line in log_file.read_text(encoding='utf-8').splitlines():
-                    if line.startswith('Backup created on:'):
-                        date_str = line.removeprefix('Backup created on:').strip()
-                        with contextlib.suppress(ValueError):
-                            date = datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S').strftime(
-                                '%Y-%m-%d %H:%M:%S'
-                            )
-                    elif line.startswith('Backup created by:'):
+                    if line.startswith('Backup created by:'):
                         author = line.removeprefix('Backup created by:').strip()
                     elif line.startswith('Comment:'):
                         comment = line.removeprefix('Comment:').strip()
@@ -449,9 +489,11 @@ class plugin(BasePlugin):
                     suggest=f'{self.server.prefix}del-bkp {entry.name}',
                     hover='Del backup',
                 ),
-                json.dumps({'text': f'{entry.name} ', 'color': 'white'}),
-                json.dumps({'text': f'[{date}] ', 'color': 'gray'}),
+                json.dumps({'text': f'{entry.name} ', 'color': 'aqua' if entry.name == auto_name else 'white'}),
+                json.dumps({'text': f'[{date}] [{time_ago}] ', 'color': 'gray'}),
             ]
+            if entry.name == auto_name:
+                components.append(json.dumps({'text': '[AUTO] ', 'color': 'light_purple'}))
             if author:
                 components.append(json.dumps({'text': f'by {author} ', 'color': 'dark_aqua'}))
             if comment:
