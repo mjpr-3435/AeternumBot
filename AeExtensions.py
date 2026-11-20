@@ -50,7 +50,7 @@ class addon(BaseAddon):
     # --- Internal Behaviour ---
 
     def _reload_internal_modules(self) -> None:
-        prefixes = ('Utils.', 'Classes.', 'Banners.')
+        prefixes = ('Utils.', 'Classes.', 'Banners.', 'MapartsUtilities.')
         modules = [name for name in sys.modules if name.startswith(prefixes)]
         for mod_name in modules:
             module = sys.modules.get(mod_name)
