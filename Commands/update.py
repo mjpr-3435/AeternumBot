@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-import io
-import zipfile
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
-import aiohttp
 import discord
-from Classes.config import AeternumConfigError, GitHubConfig, load_aeternum_config
+from Classes.config import AeternumConfigError, load_aeternum_config
 from discord import app_commands
 from discord.ext import commands
 from dismanager.classes import DisManagerClient
@@ -17,35 +14,19 @@ from Utils.discord_helpers import is_admin
 
 _ADDONS_ROOT = Path(__file__).resolve().parent.parent
 _CONFIG_PATH = _ADDONS_ROOT / 'config.yml'
-_GITHUB_API = 'https://api.github.com'
 _ACCENT_COLOUR = 0x2F3136
-
-_PROTECTED_PREFIXES = (
-    '.legacy/',
-    '.ruff_cache/',
-    '__pycache__/',
-)
-
-_PROTECTED_FILES = frozenset(
-    {
-        '.gitignore',
-        'config.yml',
-        'Banners/Public/HoneyPot/HoneyPotStats.json',
-        'Banners/MembersInfo/Tasks/tasks.json',
-        'Banners/MembersInfo/Whitelist/Whitelist.json',
-        'Banners/MembersInfo/Whitelist/WhitelistLog.csv',
-        'Banners/Public/Form/forms.json',
-        'Banners/Public/TicketSystem/tickets.json',
-    }
-)
 
 
 @dataclass(frozen=True, slots=True)
-class _CommitInfo:
-    sha: str
+class _GitStatus:
+    branch: str
+    remote_ref: str
+    local_sha: str
+    remote_sha: str
     author: str
     date_iso: str
     message: str
+    pending_commits: int
 
 
 def _format_commit_date(date_iso: str) -> str:
@@ -59,107 +40,65 @@ def _format_commit_date(date_iso: str) -> str:
     return f'<t:{unix}:f> (<t:{unix}:R>)'
 
 
-def _github_headers(token: str) -> dict[str, str]:
-    headers = {
-        'Accept': 'application/vnd.github+json',
-        'User-Agent': 'AeternumBot-Updater',
-        'X-GitHub-Api-Version': '2022-11-28',
-    }
-    if token:
-        headers['Authorization'] = f'Bearer {token}'
-    return headers
+async def _run_git(*args: str, timeout: float = 30.0) -> str:
+    proc = await asyncio.create_subprocess_exec(
+        'git',
+        '-C',
+        str(_ADDONS_ROOT),
+        *args,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    try:
+        stdout_b, stderr_b = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+    except TimeoutError as exc:
+        proc.kill()
+        await proc.wait()
+        raise RuntimeError(f'`git {args[0]}` excedió el tiempo límite ({int(timeout)}s).') from exc
+
+    stdout = stdout_b.decode('utf-8', errors='replace').strip()
+    stderr = stderr_b.decode('utf-8', errors='replace').strip()
+    if proc.returncode != 0:
+        detail = stderr or stdout or f'código {proc.returncode}'
+        raise RuntimeError(f'`git {args[0]}` falló: {detail[:400]}')
+    return stdout
 
 
-def _validate_github_config(gh: GitHubConfig) -> tuple[str, str, str]:
-    repo = gh.repo.strip()
-    if not repo or '/' not in repo or repo.count('/') != 1:
-        raise ValueError('Configura `GitHub.Repo` (`owner/repo`) en `/config` primero.')
-    branch = gh.branch.strip() or 'main'
-    return repo, branch, gh.token.strip()
+async def _fetch_git_status(configured_branch: str) -> _GitStatus:
+    branch = configured_branch.strip()
+    if not branch:
+        branch = await _run_git('rev-parse', '--abbrev-ref', 'HEAD')
 
+    await _run_git('fetch', 'origin', branch, timeout=45.0)
+    remote_ref = f'origin/{branch}'
+    local_sha = await _run_git('rev-parse', '--short', 'HEAD')
+    log_raw = await _run_git('log', '-1', '--format=%h%n%an%n%cI%n%s', remote_ref)
+    lines = log_raw.splitlines()
+    remote_sha = lines[0] if len(lines) > 0 else 'desconocido'
+    author = lines[1] if len(lines) > 1 else 'desconocido'
+    date_iso = lines[2] if len(lines) > 2 else ''
+    message = lines[3] if len(lines) > 3 else '(sin mensaje)'
+    pending_str = await _run_git('rev-list', '--count', f'HEAD..{remote_ref}')
+    pending = int(pending_str) if pending_str.isdigit() else 0
 
-async def _fetch_latest_commit(repo: str, branch: str, token: str) -> _CommitInfo:
-    url = f'{_GITHUB_API}/repos/{repo}/commits/{branch}'
-    async with (
-        aiohttp.ClientSession() as session,
-        session.get(url, headers=_github_headers(token), timeout=aiohttp.ClientTimeout(total=15)) as resp,
-    ):
-        if resp.status != 200:
-            detail = await resp.text()
-            raise RuntimeError(f'GitHub API ({resp.status}): {detail[:300]}')
-        data: dict[str, Any] = await resp.json()
-
-    commit = data.get('commit', {})
-    author_data = commit.get('author', {})
-    raw_msg = str(commit.get('message', '')).strip()
-    first_line = raw_msg.splitlines()[0] if raw_msg else '(sin mensaje)'
-    return _CommitInfo(
-        sha=str(data.get('sha', ''))[:7],
-        author=str(author_data.get('name', 'desconocido')),
-        date_iso=str(author_data.get('date', '')),
-        message=first_line,
+    return _GitStatus(
+        branch=branch,
+        remote_ref=remote_ref,
+        local_sha=local_sha,
+        remote_sha=remote_sha,
+        author=author,
+        date_iso=date_iso,
+        message=message,
+        pending_commits=pending,
     )
 
 
-async def _download_zipball(repo: str, branch: str, token: str) -> bytes:
-    url = f'{_GITHUB_API}/repos/{repo}/zipball/{branch}'
-    async with (
-        aiohttp.ClientSession() as session,
-        session.get(url, headers=_github_headers(token), timeout=aiohttp.ClientTimeout(total=60)) as resp,
-    ):
-        if resp.status != 200:
-            detail = await resp.text()
-            raise RuntimeError(f'Error descargando zipball ({resp.status}): {detail[:300]}')
-        return await resp.read()
-
-
-def _resolve_zip_prefix(names: list[str]) -> str:
-    for name in names:
-        if name.endswith('/AeternumBot/AeExtensions.py'):
-            return name.removesuffix('AeExtensions.py')
-    for name in names:
-        parts = name.split('/', 1)
-        if len(parts) == 2 and parts[1] == 'AeExtensions.py':
-            return f'{parts[0]}/'
-    raise RuntimeError('No se encontró `AeExtensions.py` dentro del zip de GitHub.')
-
-
-def _is_protected(rel_posix: str) -> bool:
-    if rel_posix in _PROTECTED_FILES:
-        return True
-    if any(rel_posix.startswith(prefix) for prefix in _PROTECTED_PREFIXES):
-        return True
-    return '/__pycache__/' in f'/{rel_posix}'
-
-
-def _apply_zip_update(zip_bytes: bytes, target_root: Path) -> int:
-    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as archive:
-        names = [info.filename for info in archive.infolist() if not info.is_dir()]
-        prefix = _resolve_zip_prefix(names)
-
-        updated = 0
-        for info in archive.infolist():
-            if info.is_dir() or not info.filename.startswith(prefix):
-                continue
-            rel_posix = info.filename[len(prefix) :].lstrip('/')
-            if not rel_posix or _is_protected(rel_posix):
-                continue
-            rel_path = Path(rel_posix)
-            if rel_path.is_absolute() or '..' in rel_path.parts:
-                continue
-
-            dest = target_root / rel_path
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(archive.read(info.filename))
-            updated += 1
-        return updated
-
-
 class _ApplyUpdateButton(discord.ui.Button['UpdateAddonsView']):
-    def __init__(self) -> None:
+    def __init__(self, *, pending: int) -> None:
+        label = 'Actualizar y recargar' if pending > 0 else 'Recargar addons'
         super().__init__(
-            label='Actualizar y recargar',
-            style=discord.ButtonStyle.success,
+            label=label,
+            style=discord.ButtonStyle.success if pending > 0 else discord.ButtonStyle.secondary,
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
@@ -167,8 +106,8 @@ class _ApplyUpdateButton(discord.ui.Button['UpdateAddonsView']):
         view = self.view
         await interaction.response.defer(ephemeral=True, thinking=True)
         try:
-            zip_bytes = await _download_zipball(view.repo, view.branch, view.token)
-            updated_files = _apply_zip_update(zip_bytes, _ADDONS_ROOT)
+            pull_output = await _run_git('pull', '--ff-only', 'origin', view.status.branch, timeout=60.0)
+            new_sha = await _run_git('rev-parse', '--short', 'HEAD')
             reloaded = await view.client.reload_addons()
         except Exception as exc:
             await interaction.followup.send(
@@ -177,57 +116,52 @@ class _ApplyUpdateButton(discord.ui.Button['UpdateAddonsView']):
             )
             return
 
+        summary_line = pull_output.splitlines()[-1] if pull_output else 'Actualizado.'
         await interaction.followup.send(
-            f'✔ Actualizado `{view.repo}@{view.branch}` (`{view.commit.sha}`): '
-            f'**{updated_files}** archivo(s) reemplazado(s) y **{reloaded}** addon(s) recargado(s).\n'
-            f'> `config.yml` y registros locales preservados.',
+            f'✔ `{view.status.remote_ref}` (`{new_sha}`) · **{reloaded}** addon(s) recargado(s).\n'
+            f'> `{summary_line}`',
             ephemeral=True,
         )
 
 
 class UpdateAddonsView(discord.ui.LayoutView):
-    """Confirmation banner showing the latest GitHub commit before applying an update."""
+    """Confirmation banner showing git status before running ``git pull`` and reloading."""
 
-    def __init__(
-        self,
-        client: DisManagerClient,
-        *,
-        repo: str,
-        branch: str,
-        token: str,
-        commit: _CommitInfo,
-    ) -> None:
+    def __init__(self, client: DisManagerClient, *, status: _GitStatus) -> None:
         super().__init__(timeout=180)
         self.client = client
-        self.repo = repo
-        self.branch = branch
-        self.token = token
-        self.commit = commit
+        self.status = status
 
+        pending_label = (
+            f'**{status.pending_commits}** commit(s) pendiente(s)'
+            if status.pending_commits > 0
+            else 'Al día (sin cambios pendientes)'
+        )
         body = (
-            f'## Actualizar Addons desde GitHub\n'
-            f'- **Repositorio:** `{repo}` (`{branch}`)\n'
-            f'- **Último commit:** `{commit.sha}` · {commit.author}\n'
-            f'- **Fecha:** {_format_commit_date(commit.date_iso)}\n'
-            f'- **Mensaje:** {commit.message}\n\n'
-            f'> Se preservarán `config.yml` y todos los registros locales (`.json` / `.csv`).'
+            f'## Actualizar Addons (`git pull`)\n'
+            f'- **Rama:** `{status.branch}` (`{status.remote_ref}`)\n'
+            f'- **Local:** `{status.local_sha}` → **Remoto:** `{status.remote_sha}` ({pending_label})\n'
+            f'- **Autor:** {status.author}\n'
+            f'- **Fecha:** {_format_commit_date(status.date_iso)}\n'
+            f'- **Mensaje:** {status.message}\n\n'
+            f'> `config.yml` y archivos ignorados en `.gitignore` se mantienen intactos.'
         )
         self.add_item(
             discord.ui.Container(
                 discord.ui.TextDisplay(body),
                 discord.ui.Separator(),
-                discord.ui.ActionRow(_ApplyUpdateButton()),
+                discord.ui.ActionRow(_ApplyUpdateButton(pending=status.pending_commits)),
                 accent_colour=_ACCENT_COLOUR,
             )
         )
 
 
 class UpdateCommandCog(commands.Cog):
-    """Admin-only ``/update addons`` command to pull updates from GitHub."""
+    """Admin-only ``/update addons`` command to pull updates via git and reload addons."""
 
     update_group = app_commands.Group(
         name='update',
-        description='Actualiza componentes del bot desde GitHub.',
+        description='Actualiza componentes del bot desde git.',
         default_permissions=discord.Permissions(administrator=True),
         guild_only=True,
     )
@@ -235,7 +169,7 @@ class UpdateCommandCog(commands.Cog):
     def __init__(self, client: DisManagerClient) -> None:
         self.client = client
 
-    @update_group.command(name='addons', description='Descarga la última versión de AeternumBot desde GitHub y recarga.')
+    @update_group.command(name='addons', description='Hace git fetch/pull de AeternumBot y recarga los addons.')
     async def update_addons(self, interaction: discord.Interaction) -> None:
         if not isinstance(interaction.user, discord.Member) or not is_admin(interaction.user):
             await interaction.response.send_message(
@@ -244,27 +178,21 @@ class UpdateCommandCog(commands.Cog):
             )
             return
 
+        branch = ''
         try:
             cfg = load_aeternum_config(_CONFIG_PATH)
-            repo, branch, token = _validate_github_config(cfg.github)
-        except (ValueError, AeternumConfigError) as exc:
-            await interaction.response.send_message(f'✖ {exc}', ephemeral=True)
-            return
+            branch = cfg.github.branch
+        except AeternumConfigError:
+            pass
 
         await interaction.response.defer(ephemeral=True, thinking=True)
         try:
-            commit = await _fetch_latest_commit(repo, branch, token)
+            status = await _fetch_git_status(branch)
         except Exception as exc:
-            await interaction.followup.send(f'✖ No se pudo consultar GitHub: {exc}', ephemeral=True)
+            await interaction.followup.send(f'✖ No se pudo consultar git: {exc}', ephemeral=True)
             return
 
-        view = UpdateAddonsView(
-            self.client,
-            repo=repo,
-            branch=branch,
-            token=token,
-            commit=commit,
-        )
+        view = UpdateAddonsView(self.client, status=status)
         await interaction.followup.send(view=view, ephemeral=True)
 
 
