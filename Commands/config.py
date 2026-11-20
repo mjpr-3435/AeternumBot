@@ -468,8 +468,8 @@ class ModsModal(_BaseConfigModal):
         )
         self.add_item(
             discord.ui.Label(
-                text='Mods Exclude (uno por línea: Servidor: patrón1, patrón2)',
-                description='Soporta wildcards con *.',
+                text='Mods Exclude',
+                description='Servidor: patrón1, patrón2 (soporta *).',
                 component=self.exclude_input,
             )
         )
