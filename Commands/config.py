@@ -445,7 +445,6 @@ class ModsModal(_BaseConfigModal):
             self.targets_input = _text_input(
                 default=', '.join(cfg.mods.targets),
                 placeholder='SMP, CMP, MMP',
-                required=False,
                 max_length=300,
             )
             self.add_item(
@@ -465,7 +464,6 @@ class ModsModal(_BaseConfigModal):
             default='\n'.join(exclude_lines),
             placeholder='SMP: Axiom*, worldedit*',
             style=discord.TextStyle.paragraph,
-            required=False,
             max_length=800,
         )
         self.add_item(
