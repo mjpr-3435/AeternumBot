@@ -185,6 +185,8 @@ class plugin(BasePlugin):
         tnt_y = evt.get('tntY')
         target_y = evt.get('targetY')
         loaded_pct = evt.get('loadedPct', 0)
+        active_bots = evt.get('activeBots')
+        bounds = evt.get('bounds')
         hint = str(evt.get('hint', '') or '')
 
         titles = {
@@ -196,31 +198,65 @@ class plugin(BasePlugin):
             'unloaded': f'Zona descargada — {zone_name}',
             'stopped': f'Vigilancia detenida — {zone_name}',
         }
+        descriptions = {
+            'started': 'La vigilancia quedó activa y esperando las primeras detonaciones dentro del perímetro.',
+            'active': 'Se detectaron detonaciones de TNT trabajando normalmente dentro del perímetro.',
+            'stalled': 'No se han registrado detonaciones recientes dentro del tiempo configurado. Conviene revisar la máquina.',
+            'low_y': 'Las detonaciones alcanzaron la altura objetivo configurada para este perímetro.',
+            'resumed': 'Volvieron a detectarse detonaciones de TNT tras el atasco anterior.',
+            'unloaded': 'Los chunks del perímetro quedaron descargados (`0%`), la vigilancia quedó en pausa.',
+            'stopped': 'La vigilancia de este perímetro fue desactivada desde el panel.',
+        }
         colors = {
             'started': 0x3FD8FF,
             'active': 0x4CAF50,
             'stalled': 0xFF5252,
-            'low_y': 0x4CAF50,
+            'low_y': 0xE0A95B,
             'resumed': 0x4CAF50,
             'unloaded': 0x9E9E9E,
             'stopped': 0x607D8B,
         }
+        dim_labels = {
+            'overworld': 'Overworld',
+            'the_nether': 'Nether',
+            'the_end': 'End',
+        }
+        dim_key = dimension.removeprefix('minecraft:')
+        dim_label = dim_labels.get(dim_key, dim_key)
 
         embed = discord.Embed(
             title=titles.get(event_type, f'Evento World Eater ({event_type}) — {zone_name}'),
+            description=descriptions.get(event_type, ''),
             color=colors.get(event_type, 0xE0A95B),
+            timestamp=discord.utils.utcnow(),
         )
-        embed.add_field(name='Servidor', value=self.process.name, inline=True)
-        embed.add_field(name='Dimensión', value=dimension.removeprefix('minecraft:'), inline=True)
-        embed.add_field(name='Carga', value=f'{loaded_pct}%', inline=True)
+        embed.set_author(name='Aeternum • Monitor de World Eater')
+        if cfg.thumbnail:
+            embed.set_thumbnail(url=cfg.thumbnail)
+
+        embed.add_field(name='Servidor', value=f'`{self.process.name}`', inline=True)
+        embed.add_field(name='Dimensión', value=f'`{dim_label}`', inline=True)
+        embed.add_field(name='Chunks cargados', value=f'`{loaded_pct}%`', inline=True)
         embed.add_field(
-            name='Capa TNT',
-            value=f'`Y={tnt_y}` (objetivo `<= {target_y}`)' if tnt_y is not None else f'`--` (objetivo `<= {target_y}`)',
+            name='Altura actual de TNT',
+            value=f'`Y = {tnt_y}`' if tnt_y is not None else '`Sin detonaciones aún`',
             inline=True,
         )
+        embed.add_field(name='Objetivo de excavación', value=f'`Y <= {target_y}`', inline=True)
+        if active_bots is not None:
+            embed.add_field(name='Bots en grilla', value=f'`{active_bots}`', inline=True)
+        if isinstance(bounds, list) and len(bounds) == 4:
+            embed.add_field(
+                name='Área del perímetro',
+                value=f'`[{bounds[0]}, {bounds[1]}]` → `[{bounds[2]}, {bounds[3]}]`',
+                inline=False,
+            )
         if hint:
-            embed.add_field(name='Posible blocker cercano', value=f'`{hint}`', inline=False)
-        embed.set_footer(text=f'WE:{self.process.name}:{zone_id}')
+            embed.add_field(name='Posible bloqueador cercano', value=f'`{hint}`', inline=False)
+        embed.set_footer(
+            text=f'WE:{self.process.name}:{zone_id}',
+            icon_url=cfg.thumbnail or None,
+        )
 
         critical = event_type in ('stalled', 'low_y', 'unloaded')
         mention_text = ''
