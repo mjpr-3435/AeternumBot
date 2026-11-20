@@ -477,6 +477,38 @@ class CommunicationModal(_BaseConfigModal):
         }
 
 
+class WorldEaterModal(_BaseConfigModal):
+    def __init__(self, banner_view: ConfigBannerView) -> None:
+        super().__init__(
+            title='WorldEater',
+            banner_view=banner_view,
+            section_label='WorldEater',
+        )
+        we = banner_view.cfg.world_eater
+        self.channel_select = _channel_select(
+            we.channel_id,
+            channel_types=[discord.ChannelType.text],
+        )
+        self.allow_dm_select = discord.ui.Select(
+            options=[
+                discord.SelectOption(label='Activado (True)', value='true', default=we.allow_dm),
+                discord.SelectOption(label='Desactivado (False)', value='false', default=not we.allow_dm),
+            ],
+            min_values=1,
+            max_values=1,
+        )
+        self.add_item(discord.ui.Label(text='WorldEater: Canal de alertas', component=self.channel_select))
+        self.add_item(discord.ui.Label(text='WorldEater: Permitir DM', component=self.allow_dm_select))
+
+    def build_updates(self) -> dict[str, Any]:
+        return {
+            'WorldEater': {
+                'Channel ID': _selected_id(self.channel_select.values),
+                'Allow DM': self.allow_dm_select.values[0] == 'true',
+            }
+        }
+
+
 class HoneyPotModal(_BaseConfigModal):
     def __init__(self, banner_view: ConfigBannerView) -> None:
         super().__init__(
@@ -962,13 +994,18 @@ class ConfigBannerView(discord.ui.View):
                 f'- **Plugins por servidor:**\n{plugins_text}'
             )
         if self.page == 3:
+            we = cfg.world_eater
+            dm_txt = '`Activado`' if we.allow_dm else '`Desactivado`'
             return (
                 f'**ChatBridge**\n'
                 f'- **Channel ID:** {_fmt_channel(cfg.chatbridge.channel_id)}\n'
                 f'- **Webhook Name:** {_fmt_str(cfg.chatbridge.webhook_name)}\n\n'
                 f'**TTS**\n'
                 f'- **Channel ID:** {_fmt_channel(cfg.tts.channel_id)}\n'
-                f'- **Webhook Name:** {_fmt_str(cfg.tts.webhook_name)}'
+                f'- **Webhook Name:** {_fmt_str(cfg.tts.webhook_name)}\n\n'
+                f'**WorldEater**\n'
+                f'- **Channel ID:** {_fmt_channel(we.channel_id)}\n'
+                f'- **Allow DM:** {dm_txt}'
             )
         if self.page == 4:
             hp = cfg.honeypot
@@ -1076,9 +1113,17 @@ class ConfigBannerView(discord.ui.View):
                         label='ChatBridge & TTS',
                         value='comm',
                         description='Canales y webhooks de ChatBridge y TTS',
-                    )
+                    ),
+                    discord.SelectOption(
+                        label='WorldEater',
+                        value='world_eater',
+                        description='Canal de alertas y avisos por DM de World Eater',
+                    ),
                 ],
-                {'comm': CommunicationModal},
+                {
+                    'comm': CommunicationModal,
+                    'world_eater': WorldEaterModal,
+                },
             )
 
         if self.page == 4:
