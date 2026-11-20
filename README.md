@@ -19,4 +19,6 @@ Addon de Discord y Minecraft para **Aeternum SMP**, pensado para ejecutarse sobr
 
 ## Actualizaciones
 
-Una vez configurado el bloque **GitHub Updater** en `/config`, puedes actualizar los archivos de código desde Discord con `/update addons` (preserva `config.yml` y los registros locales) y recargar automáticamente los addons.
+Una vez configurado el bloque **GitHub Updater** en `/config`, puedes actualizar los archivos de código desde Discord con `/update addons` (preserva `config.yml` y los archivos ignorados en `.gitignore`) y recargar automáticamente los addons.
+
+> **Requisito:** `/update addons` ejecuta `git` directamente, por lo que requiere tener **`git` instalado** (accesible en el `PATH`) y que la carpeta esté clonada como repositorio Git con el remoto `origin` configurado.
