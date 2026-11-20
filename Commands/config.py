@@ -1005,6 +1005,7 @@ class ConfigBannerView(discord.ui.View):
             return (
                 f'- **Servers:** {_fmt_list(cfg.servers)}\n'
                 f'- **Guide Targets:** {_fmt_list(cfg.guide_targets)}\n'
+                f'- **Mods Targets:** {_fmt_list(cfg.mods.targets)}\n'
                 f'- **Plugins por servidor:**\n{plugins_text}'
             )
         if self.page == 3:

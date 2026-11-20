@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import fnmatch
 import importlib
 import os
 import shutil
@@ -139,6 +140,59 @@ class addon(BaseAddon):
 
             print(f'     -> Guías sincronizadas: {process.name} ({guide_count})')
 
+    def _manage_mods(self) -> None:
+        mods_source = self.addons_root / 'Mods'
+        if not mods_source.is_dir() or not self.config.mods.targets:
+            return
+
+        available_jars = sorted(
+            p for p in mods_source.iterdir() if p.is_file() and p.suffix.lower() == '.jar'
+        )
+        if not available_jars:
+            return
+
+        targets_cf = {target.casefold() for target in self.config.mods.targets}
+        exclude_cf = {
+            server_name.casefold(): patterns
+            for server_name, patterns in self.config.mods.exclude.items()
+        }
+
+        for process in self.client.processes:
+            if process.name.casefold() not in targets_cf:
+                continue
+            if process.is_running():
+                print(f'     -> Mods omitidos (servidor activo): {process.name}')
+                continue
+
+            patterns = exclude_cf.get(process.name.casefold(), ())
+            wanted_jars = {
+                jar.name: jar
+                for jar in available_jars
+                if not any(fnmatch.fnmatchcase(jar.name.casefold(), pat.casefold()) for pat in patterns)
+            }
+
+            dest_dir = process.path / 'server' / 'mods'
+            dest_dir.mkdir(parents=True, exist_ok=True)
+
+            for existing in dest_dir.iterdir():
+                if existing.is_file() and existing.suffix.lower() == '.jar' and existing.name not in wanted_jars:
+                    existing.unlink()
+
+            for name, src_path in wanted_jars.items():
+                dst_path = dest_dir / name
+                src_stat = src_path.stat()
+                if dst_path.is_file():
+                    dst_stat = dst_path.stat()
+                    if dst_stat.st_size == src_stat.st_size and int(dst_stat.st_mtime) == int(src_stat.st_mtime):
+                        continue
+                    dst_path.unlink()
+                try:
+                    os.link(src_path, dst_path)
+                except OSError:
+                    shutil.copy2(src_path, dst_path)
+
+            print(f'     -> Mods sincronizados: {process.name} ({len(wanted_jars)})')
+
     async def _load_cogs(self) -> None:
         for cog_dir_name in _COG_DIRS:
             cog_dir = self.addons_root / cog_dir_name
@@ -189,6 +243,7 @@ class addon(BaseAddon):
         self._restore_player_snapshot()
         await self._manage_plugins()
         self._manage_guides()
+        self._manage_mods()
         await self._load_cogs()
         self._start_banners()
         self.persistent_tasks.append(asyncio.create_task(self._sync_command_tree()))

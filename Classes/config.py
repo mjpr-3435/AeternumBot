@@ -119,6 +119,14 @@ class MembersInfoConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class ModsConfig:
+    """Configuration for syncing shared Fabric mods from ``AeternumBot/Mods/``."""
+
+    targets: tuple[str, ...]
+    exclude: dict[str, tuple[str, ...]]
+
+
+@dataclass(frozen=True, slots=True)
 class AeternumConfig:
     """Centralized validated configuration for AeternumBot."""
 
@@ -142,6 +150,7 @@ class AeternumConfig:
     discord_info: DiscordInfoConfig
     members_info: MembersInfoConfig
     plugins: dict[str, tuple[str, ...]]
+    mods: ModsConfig
 
 
 def load_aeternum_config(path: Path) -> AeternumConfig:
@@ -228,6 +237,7 @@ def _build_aeternum_config(raw: Mapping[str, Any]) -> AeternumConfig:
         discord_info=_parse_discord_info(raw),
         members_info=_parse_members_info(raw),
         plugins=_parse_plugins(raw),
+        mods=_parse_mods(raw),
     )
 
 
@@ -418,6 +428,29 @@ def _parse_plugins(data: Mapping[str, Any]) -> dict[str, tuple[str, ...]]:
     return parsed
 
 
+def _parse_mods(data: Mapping[str, Any]) -> ModsConfig:
+    raw_mods = data.get('Mods')
+    if raw_mods is None:
+        return ModsConfig(targets=(), exclude={})
+    if not isinstance(raw_mods, Mapping):
+        raise AeternumConfigError("'Mods' must be a YAML mapping.")
+
+    targets = _require_str_tuple(raw_mods, 'Targets') if 'Targets' in raw_mods else ()
+    raw_exclude = raw_mods.get('Exclude')
+    exclude: dict[str, tuple[str, ...]] = {}
+    if raw_exclude is not None:
+        if not isinstance(raw_exclude, Mapping):
+            raise AeternumConfigError("'Mods.Exclude' must be a YAML mapping.")
+        for server_name, patterns in raw_exclude.items():
+            if not isinstance(server_name, str):
+                raise AeternumConfigError("'Mods.Exclude' keys must be server names.")
+            if not isinstance(patterns, list) or not all(isinstance(item, str) for item in patterns):
+                raise AeternumConfigError(f"'Mods.Exclude.{server_name}' must be a list of strings.")
+            exclude[server_name] = tuple(patterns)
+
+    return ModsConfig(targets=targets, exclude=exclude)
+
+
 _DEFAULT_CONFIG_YAML = """# =========================================
 #                 General
 # =========================================
@@ -458,6 +491,11 @@ WorldEater:
 Plugins:
   SMP:
     - world-eater.py
+
+# Mods compartidos en AeternumBot/Mods/ sincronizados a <proceso>/server/mods/
+Mods:
+  Targets: []
+  Exclude: {}
 
 # =========================================
 #              Comunicación
