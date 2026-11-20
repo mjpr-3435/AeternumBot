@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import discord
+from Banners.Public.TicketSystem.LogInteraction import is_ticket
 from Classes.config import get_ae_config
 from discord import app_commands
 from discord.app_commands import Choice, choices
@@ -67,9 +68,9 @@ class TicketToolsCommand(commands.Cog):
             )
             return
 
-        if not isinstance(interaction.channel, discord.TextChannel):
+        if not isinstance(interaction.channel, discord.TextChannel) or not is_ticket(interaction.channel.id):
             await interaction.response.send_message(
-                '✖ Este comando solo puede usarse en canales de texto.',
+                '✖ Este comando solo puede usarse dentro de un canal de ticket.',
                 ephemeral=True,
                 delete_after=2,
             )

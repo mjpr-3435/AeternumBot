@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import shutil
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from dismanager.classes import BasePlugin, ManagedProcess
 from Utils.rcon import rcon_execute
 
 _DIMS = ('overworld', 'the_nether', 'the_end')
+_MAX_SELECTED_REGIONS = 2500  # 50x50 regiones (~25.6k x 25.6k bloques)
 _PAPER_WORLDS = {
     'overworld': 'world',
     'the_nether': 'world_nether',
@@ -142,6 +144,13 @@ class plugin(BasePlugin):
 
         player_map = target_map.setdefault(player, {d: [] for d in _DIMS})
         if reg not in player_map[dim]:
+            total_selected = sum(len(regs) for regs in player_map.values())
+            if total_selected >= _MAX_SELECTED_REGIONS:
+                self.server.send_response(
+                    player,
+                    f'✖ Límite de {_MAX_SELECTED_REGIONS} regiones alcanzado (~25k×25k).',
+                )
+                return
             player_map[dim].append(reg)
 
         self._show_list(player)
@@ -175,7 +184,18 @@ class plugin(BasePlugin):
 
         x_min, x_max = sorted([pos1[0], pos2[0]])
         z_min, z_max = sorted([pos1[2], pos2[2]])
+        rx_min, rx_max = math.floor(x_min / 512), math.floor(x_max / 512)
+        rz_min, rz_max = math.floor(z_min / 512), math.floor(z_max / 512)
+        rect_count = (rx_max - rx_min + 1) * (rz_max - rz_min + 1)
         player_regions = target_map.setdefault(player, {d: [] for d in _DIMS})
+        existing_count = sum(len(regs) for regs in player_regions.values())
+        if rect_count + existing_count > _MAX_SELECTED_REGIONS:
+            self.server.send_response(
+                player,
+                f'✖ Selección demasiado grande ({rect_count:,} regiones; máximo {_MAX_SELECTED_REGIONS:,}, ~25k×25k).',
+            )
+            return
+
         for reg_path in region_folder.glob('*.mca'):
             r_x, r_z = map(int, reg_path.stem[2:].split('.'))
             reg_x_min = r_x * 512

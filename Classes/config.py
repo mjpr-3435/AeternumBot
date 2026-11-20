@@ -124,6 +124,7 @@ class AeternumConfig:
 
     rcon_password: str
     minecraft_version: str
+    motd: str
     thumbnail: str
     server_emoji: str
     github: GitHubConfig
@@ -201,11 +202,15 @@ def save_aeternum_config_updates(path: Path, updates: Mapping[str, Any]) -> Aete
     return validated
 
 
+_DEFAULT_MOTD = r'\u00A7f\u00A7lAeternum \u00A79\u00A7lNetwork\n\u00A7f {servers} \u00A78{version}'
+
+
 def _build_aeternum_config(raw: Mapping[str, Any]) -> AeternumConfig:
     chatbridge = _parse_chatbridge(raw)
     return AeternumConfig(
         rcon_password=_require_str(raw, 'RCON Password'),
         minecraft_version=_require_str(raw, 'Minecraft Version') if 'Minecraft Version' in raw else '',
+        motd=_require_str(raw, 'MOTD') if 'MOTD' in raw else _DEFAULT_MOTD,
         thumbnail=_require_str(raw, 'Thumbnail'),
         server_emoji=_require_str(raw, 'Server Emoji'),
         github=_parse_github(raw),
@@ -431,6 +436,7 @@ GitHub:
 
 RCON Password: ''
 Minecraft Version: ''
+MOTD: '\u00A7f\u00A7lAeternum \u00A79\u00A7lNetwork\n\u00A7f {servers} \u00A78{version}'
 
 # Jugadores con permisos administrativos dentro de Minecraft
 Admins: []

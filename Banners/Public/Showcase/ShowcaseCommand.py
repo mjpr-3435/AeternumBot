@@ -22,6 +22,8 @@ class ShowcaseCommand(commands.Cog):
         name='showcase_post',
         description='Crea un post nuevo en Showcase',
     )
+    @app_commands.default_permissions(administrator=True)
+    @app_commands.guild_only()
     @app_commands.describe(
         title='Titulo del post',
         image='Imagen principal del post',

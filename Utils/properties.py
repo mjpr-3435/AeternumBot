@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from pathlib import Path
+
+_JAVA_PREFIX_RE = re.compile(r'^java\s+', re.IGNORECASE)
 
 
 def read_properties(path: str | Path) -> dict[str, str]:
@@ -44,3 +47,39 @@ def write_properties(path: str | Path, properties: Mapping[str, str]) -> None:
             updated_lines.append(f'{key}={value}')
 
     file_path.write_text('\n'.join(updated_lines) + ('\n' if updated_lines else ''), encoding='utf-8')
+
+
+def normalize_motd(motd: str) -> str:
+    """Normalize section signs and newlines for Java ``server.properties``."""
+    return (
+        motd.replace('Â§', '§')
+        .replace('§', r'\u00A7')
+        .replace('\r\n', r'\n')
+        .replace('\n', r'\n')
+    )
+
+
+def render_motd(template: str, *, servers: tuple[str, ...], minecraft_version: str) -> str:
+    """Render a MOTD template using configured servers and Minecraft version."""
+    stripped = template.strip()
+    if not stripped:
+        return ''
+
+    servers_str = ' '.join(f'[{server}]' for server in servers)
+    version_str = _JAVA_PREFIX_RE.sub('', minecraft_version.strip())
+    rendered = stripped.replace('{servers}', servers_str).replace('{version}', version_str)
+    return normalize_motd(rendered)
+
+
+def ensure_motd_property(properties_path: Path, *, motd: str) -> bool:
+    """Ensure ``motd`` in ``properties_path`` matches ``motd``. Returns whether it changed."""
+    if not properties_path.is_file() or not motd:
+        return False
+
+    props = read_properties(properties_path)
+    if props.get('motd') == motd:
+        return False
+
+    props['motd'] = motd
+    write_properties(properties_path, props)
+    return True

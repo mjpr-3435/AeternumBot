@@ -3,11 +3,39 @@ from __future__ import annotations
 from typing import cast
 
 import discord
+from Classes.config import get_ae_config
 from dismanager.classes import DisManagerClient
+from Utils.discord_helpers import is_admin
 
 from ..Form.FormCreation import form_creation
 from .LogInteraction import ticket_info_request, ticket_info_update
 from .TicketBanner import ticket_banner_embed
+
+
+async def _guard_ticket_actor(interaction: discord.Interaction, *, lang: str) -> bool:
+    """Ensure ``interaction.user`` is the ticket owner, an admin, or an interviewer."""
+    if interaction.channel is None:
+        return False
+
+    owner_id = ticket_info_request(interaction.channel.id, ['owner_id'])
+    if interaction.user.id == owner_id:
+        return True
+
+    if isinstance(interaction.user, discord.Member):
+        if is_admin(interaction.user):
+            return True
+        client = cast(DisManagerClient, interaction.client)
+        interviewer_role_id = get_ae_config(client).tickets.interviewer_role_id
+        if any(role.id == interviewer_role_id for role in interaction.user.roles):
+            return True
+
+    msg = (
+        '✖ Only the ticket owner or staff can do this.'
+        if lang == 'en'
+        else '✖ Solo el dueño del ticket o el staff puede hacer esto.'
+    )
+    await interaction.response.send_message(msg, ephemeral=True, delete_after=5)
+    return False
 
 
 class TicketBannerView(discord.ui.View):
@@ -49,6 +77,8 @@ class TicketBannerView(discord.ui.View):
     ) -> None:
         ticket_number = await self._guard_ticket(interaction)
         if ticket_number is None or interaction.channel is None:
+            return
+        if not await _guard_ticket_actor(interaction, lang=self.lang):
             return
 
         new_lang = 'es' if self.lang == 'en' else 'en'
@@ -119,6 +149,8 @@ class TicketBannerView(discord.ui.View):
         ticket_number = await self._guard_ticket(interaction)
         if ticket_number is None:
             return
+        if not await _guard_ticket_actor(interaction, lang=self.lang):
+            return
 
         embed = ticket_banner_embed(interaction.user, ticket_number, lang=self.lang)
         if self.lang == 'en':
@@ -182,6 +214,8 @@ class TicketCloseConfirmView(discord.ui.View):
         ticket_number = await self._guard_ticket(interaction)
         if ticket_number is None or not isinstance(interaction.channel, discord.TextChannel):
             return
+        if not await _guard_ticket_actor(interaction, lang=self.lang):
+            return
 
         embed = ticket_banner_embed(interaction.user, ticket_number, lang=self.lang)
         if self.lang == 'en':
@@ -205,6 +239,8 @@ class TicketCloseConfirmView(discord.ui.View):
     ) -> None:
         ticket_number = await self._guard_ticket(interaction)
         if ticket_number is None:
+            return
+        if not await _guard_ticket_actor(interaction, lang=self.lang):
             return
 
         await interaction.response.edit_message(

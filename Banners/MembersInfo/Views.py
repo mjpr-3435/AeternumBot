@@ -36,7 +36,10 @@ class MembersInfoView(discord.ui.View):
 
         await interaction.response.send_message(
             embed=whitelist_embed(client),
-            view=WhitelistListView(is_admin_request=user_is_admin or has_interviewer),
+            view=WhitelistListView(
+                is_admin_request=user_is_admin,
+                is_interviewer_request=has_interviewer,
+            ),
             ephemeral=True,
         )
 

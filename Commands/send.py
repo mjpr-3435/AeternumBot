@@ -31,6 +31,8 @@ class SendCommand(commands.Cog):
         name='send',
         description='Haz que el bot envíe un mensaje',
     )
+    @app_commands.default_permissions(administrator=True)
+    @app_commands.guild_only()
     async def send_command(self, interaction: discord.Interaction) -> None:
         if not isinstance(interaction.user, discord.Member) or not is_admin(interaction.user):
             await interaction.response.send_message(

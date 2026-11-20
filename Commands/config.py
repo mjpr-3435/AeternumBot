@@ -256,8 +256,20 @@ class MinecraftModal(_BaseConfigModal):
             placeholder='Jugador operador de WorldTrimmer',
             max_length=64,
         )
+        self.motd_input = _text_input(
+            default=cfg.motd,
+            placeholder=r'\u00A7f\u00A7lAeternum \u00A79\u00A7lNetwork\n\u00A7f {servers} \u00A78{version}',
+            max_length=300,
+        )
         self.add_item(discord.ui.Label(text='RCON Password', component=self.rcon_input))
         self.add_item(discord.ui.Label(text='Minecraft Version', component=self.version_input))
+        self.add_item(
+            discord.ui.Label(
+                text='MOTD (usa {servers} y {version})',
+                description='Vacío para no gestionar server.properties.',
+                component=self.motd_input,
+            )
+        )
         self.add_item(
             discord.ui.Label(
                 text='Admins (Minecraft)',
@@ -271,6 +283,7 @@ class MinecraftModal(_BaseConfigModal):
         return {
             'RCON Password': self.rcon_input.value.strip(),
             'Minecraft Version': self.version_input.value.strip(),
+            'MOTD': self.motd_input.value.strip(),
             'Admins': [line.strip() for line in self.admins_input.value.splitlines() if line.strip()],
             'WorldTrimmer': {'Operator': self.operator_input.value.strip()},
         }
@@ -978,16 +991,17 @@ class ConfigBannerView(discord.ui.View):
             return (
                 f'- **RCON Password:** {_fmt_str(cfg.rcon_password, spoiler=True)}\n'
                 f'- **Minecraft Version:** {_fmt_str(cfg.minecraft_version)}\n'
+                f'- **MOTD:** {_fmt_str(cfg.motd)}\n'
                 f'- **Admins:** {_fmt_list(cfg.admins)}\n'
                 f'- **WorldTrimmer Operator:** {_fmt_str(cfg.world_trimmer.operator)}'
             )
         if self.page == 2:
-            processes = _available_processes(self.client, cfg)
+            configured_servers = list(cfg.servers)
             plugin_lines = [
                 f'  - `{srv}`: {_fmt_list(cfg.plugins.get(srv, ()))}'
-                for srv in (processes or list(cfg.plugins))
+                for srv in configured_servers
             ]
-            plugins_text = '\n'.join(plugin_lines) if plugin_lines else '  - *Sin servidores detectados*'
+            plugins_text = '\n'.join(plugin_lines) if plugin_lines else '  - *Sin servidores configurados*'
             return (
                 f'- **Servers:** {_fmt_list(cfg.servers)}\n'
                 f'- **Guide Targets:** {_fmt_list(cfg.guide_targets)}\n'
@@ -1094,7 +1108,7 @@ class ConfigBannerView(discord.ui.View):
             factories = {'servers_targets': ServersTargetsModal}
             plugin_files = _available_plugin_files()
             if plugin_files:
-                for server_name in _available_processes(self.client, self.cfg)[:24]:
+                for server_name in self.cfg.servers[:24]:
                     key = f'plugins:{server_name}'
                     options.append(
                         discord.SelectOption(

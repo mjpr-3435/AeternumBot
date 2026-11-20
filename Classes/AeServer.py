@@ -10,6 +10,7 @@ from Banners.MembersInfo.Whitelist import update_player_date
 from Classes.config import AeternumConfig
 from dismanager.core.managed_process import BackupEntry, ManagedProcess
 from Utils.minecraft_text import hover_and_suggest
+from Utils.properties import ensure_motd_property, render_motd
 from Utils.rcon import RconError, ensure_rcon_properties, rcon_execute
 
 if TYPE_CHECKING:
@@ -45,14 +46,31 @@ class AeServer:
         self.rcon_port               = None
         self.rcon_password           = config.rcon_password
         self._configure_rcon()
+        self._configure_motd()
 
     # --- Internal Behaviour ---
 
+    def _properties_candidates(self) -> tuple[Path, Path]:
+        return (self.path / 'server.properties', self.path / 'server' / 'server.properties')
+
     def _configure_rcon(self) -> None:
-        for candidate in (self.path / 'server.properties', self.path / 'server' / 'server.properties'):
+        for candidate in self._properties_candidates():
             rcon_port = ensure_rcon_properties(candidate, password=self.rcon_password, port_offset=3500)
             if rcon_port is not None:
                 self.rcon_port = rcon_port
+                return
+
+    def _configure_motd(self) -> None:
+        motd = render_motd(
+            self.config.motd,
+            servers=self.config.servers,
+            minecraft_version=self.config.minecraft_version,
+        )
+        if not motd:
+            return
+        for candidate in self._properties_candidates():
+            if candidate.is_file():
+                ensure_motd_property(candidate, motd=motd)
                 return
 
     async def _handle_info_line(self, log: str) -> None:

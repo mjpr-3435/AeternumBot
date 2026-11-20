@@ -22,6 +22,8 @@ class TaskCommand(commands.Cog):
         name='task',
         description='Administra los hilos de tareas',
     )
+    @app_commands.default_permissions(administrator=True)
+    @app_commands.guild_only()
     @describe(
         name='Nombre del hilo de tareas',
         action='Acción que quieres hacer con el hilo',

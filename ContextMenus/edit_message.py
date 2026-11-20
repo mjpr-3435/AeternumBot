@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 from dismanager.classes import DisManagerClient
 from Utils.discord_helpers import is_admin
@@ -30,6 +31,8 @@ class EditMessageContextMenu(commands.Cog):
         self.client = client
 
         @client.tree.context_menu(name='Edit Message')
+        @app_commands.default_permissions(administrator=True)
+        @app_commands.guild_only()
         async def edit_message(
             interaction: discord.Interaction,
             message: discord.Message,

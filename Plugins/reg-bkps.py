@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
 import shutil
 import zipfile
@@ -15,6 +16,7 @@ from dismanager.core.managed_process import BackupEntry
 from Utils.minecraft_text import extras, hover, hover_and_suggest
 
 _DIMS = ('overworld', 'the_nether', 'the_end')
+_MAX_SELECTED_REGIONS = 2500  # 50x50 regiones (~25.6k x 25.6k bloques)
 
 
 def _dim_folders(dim: str) -> tuple[str, str, str]:
@@ -95,6 +97,13 @@ class plugin(BasePlugin):
             pos, dim = pos_dim
             reg = self._pos_to_region(pos)
             if reg not in self.files_to_zip[player][dim]:
+                total_selected = sum(len(regs) for regs in self.files_to_zip[player].values())
+                if total_selected >= _MAX_SELECTED_REGIONS:
+                    self.server.send_response(
+                        player,
+                        f'✖ Límite de {_MAX_SELECTED_REGIONS} regiones alcanzado (~25k×25k).',
+                    )
+                    return
                 self.files_to_zip[player][dim].append(reg)
             self._show_list(player)
             return
@@ -558,8 +567,8 @@ class plugin(BasePlugin):
         self.player_positions[player][dim][corner] = pos
         self.server.send_response(player, f'✔ {corner.capitalize()} establecida')
         if self.player_positions[player][dim][other] is not None:
-            self._add_rect_regions(player, dim)
-            self._show_list(player)
+            if self._add_rect_regions(player, dim):
+                self._show_list(player)
 
     def _is_admin_or_whitelisted(self, player: str) -> bool:
         return player in self.server.admins or player in self.whitelisted_players
@@ -756,19 +765,30 @@ class plugin(BasePlugin):
             return base / 'DIM1' / 'region'
         raise ValueError(f'Dimensión desconocida: {dim}')
 
-    def _add_rect_regions(self, player: str, dim: str) -> None:
+    def _add_rect_regions(self, player: str, dim: str) -> bool:
         pos1 = self.player_positions[player][dim]['pos1']
         pos2 = self.player_positions[player][dim]['pos2']
         if pos1 is None or pos2 is None:
-            return
+            return False
 
         x_min, x_max = sorted([pos1[0], pos2[0]])
         z_min, z_max = sorted([pos1[2], pos2[2]])
+        rx_min, rx_max = math.floor(x_min / 512), math.floor(x_max / 512)
+        rz_min, rz_max = math.floor(z_min / 512), math.floor(z_max / 512)
+        rect_count = (rx_max - rx_min + 1) * (rz_max - rz_min + 1)
+        other_count = sum(len(regs) for d, regs in self.files_to_zip[player].items() if d != dim)
+        if rect_count + other_count > _MAX_SELECTED_REGIONS:
+            self.server.send_response(
+                player,
+                f'✖ Selección demasiado grande ({rect_count:,} regiones; máximo {_MAX_SELECTED_REGIONS:,}, ~25k×25k).',
+            )
+            return False
+
         self.files_to_zip[player][dim] = []
 
         region_folder = self._get_region_folder(dim)
         if not region_folder.is_dir():
-            return
+            return True
 
         for reg_path in region_folder.glob('*.mca'):
             r_x, r_z = map(int, reg_path.stem[2:].split('.'))
@@ -778,3 +798,4 @@ class plugin(BasePlugin):
             reg_z_max = reg_z_min + 511
             if not (reg_x_max < x_min or reg_x_min > x_max or reg_z_max < z_min or reg_z_min > z_max):
                 self.files_to_zip[player][dim].append(reg_path.name)
+        return True

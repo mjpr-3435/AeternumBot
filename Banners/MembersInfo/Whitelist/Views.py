@@ -447,7 +447,7 @@ class _WhitelistActionSelect(discord.ui.Select['WhitelistListView']):
 class WhitelistListView(discord.ui.View):
     """Ephemeral paginated whitelist viewer and management controls."""
 
-    def __init__(self, *, is_admin_request: bool = False) -> None:
+    def __init__(self, *, is_admin_request: bool = False, is_interviewer_request: bool = False) -> None:
         super().__init__(timeout=300)
         self.is_admin_request = is_admin_request
         self.only_inactives = False
@@ -460,6 +460,7 @@ class WhitelistListView(discord.ui.View):
         if self.is_admin_request:
             self.add_item(_InactivesToggleButton())
             self.add_item(_DateFormatToggleButton())
+        if self.is_admin_request or is_interviewer_request:
             self.add_item(_WhitelistActionSelect())
         self.add_item(_PreviousPageButton())
         self.add_item(_NextPageButton())
