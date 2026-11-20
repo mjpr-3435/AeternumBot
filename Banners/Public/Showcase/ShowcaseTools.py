@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import traceback
 from typing import cast
 
@@ -41,20 +42,36 @@ async def _fetch_showcase_thread(
     return fetched if isinstance(fetched, discord.Thread) else None
 
 
-async def ensure_showcase_post_menu(post_message: discord.Message) -> None:
-    """Attach the persistent Showcase management menu to ``post_message``."""
+def _has_showcase_menu(message: discord.Message) -> bool:
+    for row in message.components:
+        for comp in getattr(row, 'children', ()):
+            if getattr(comp, 'custom_id', None) == SHOWCASE_MENU_ID:
+                return True
+    return False
+
+
+async def ensure_showcase_post_menu(post_message: discord.Message) -> bool:
+    """Attach the persistent Showcase management menu to ``post_message`` if missing."""
+    if _has_showcase_menu(post_message):
+        return False
     await post_message.edit(view=ShowcasePostMenuView())
+    return True
 
 
 async def ensure_showcase_controls(client: DisManagerClient) -> None:
     """Sync the Showcase management menu across existing posts in the Showcase channel."""
+    if client.user is None:
+        return
     channel = client.get_channel(get_ae_config(client).discord_info.showcase_id)
     if not isinstance(channel, discord.TextChannel):
         return
 
     async for message in channel.history(limit=None, oldest_first=True):
+        if message.author.id != client.user.id:
+            continue
         try:
-            await ensure_showcase_post_menu(message)
+            if await ensure_showcase_post_menu(message):
+                await asyncio.sleep(1.1)
         except Exception:
             print(f'Showcase control sync error for message {message.id}:\n{traceback.format_exc()}')
 
