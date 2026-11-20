@@ -416,6 +416,96 @@ class ServersTargetsModal(_BaseConfigModal):
         }
 
 
+class ModsModal(_BaseConfigModal):
+    def __init__(self, banner_view: ConfigBannerView) -> None:
+        super().__init__(
+            title='Mods (Targets & Exclude)',
+            banner_view=banner_view,
+            section_label='Mods',
+        )
+        cfg = banner_view.cfg
+        processes = _available_processes(banner_view.client, cfg)
+        self.targets_select: discord.ui.Select[Any] | None = None
+        self.targets_input: discord.ui.TextInput[Any] | None = None
+
+        if processes:
+            target_options = [
+                discord.SelectOption(label=name, value=name, default=name in cfg.mods.targets)
+                for name in processes[:25]
+            ]
+            self.targets_select = discord.ui.Select(
+                placeholder='Selecciona los servidores destino de Mods/',
+                options=target_options,
+                min_values=0,
+                max_values=len(target_options),
+                required=False,
+            )
+            self.add_item(discord.ui.Label(text='Mods Targets', component=self.targets_select))
+        else:
+            self.targets_input = _text_input(
+                default=', '.join(cfg.mods.targets),
+                placeholder='SMP, CMP, MMP',
+                required=False,
+                max_length=300,
+            )
+            self.add_item(
+                discord.ui.Label(
+                    text='Mods Targets',
+                    description='Nombres separados por coma.',
+                    component=self.targets_input,
+                )
+            )
+
+        exclude_lines = [
+            f'{server_name}: {", ".join(patterns)}'
+            for server_name, patterns in cfg.mods.exclude.items()
+            if patterns
+        ]
+        self.exclude_input = _text_input(
+            default='\n'.join(exclude_lines),
+            placeholder='SMP: Axiom*, worldedit*',
+            style=discord.TextStyle.paragraph,
+            required=False,
+            max_length=800,
+        )
+        self.add_item(
+            discord.ui.Label(
+                text='Mods Exclude (uno por línea: Servidor: patrón1, patrón2)',
+                description='Soporta wildcards con *.',
+                component=self.exclude_input,
+            )
+        )
+
+    def build_updates(self) -> dict[str, Any]:
+        if self.targets_select is not None:
+            targets = list(self.targets_select.values)
+        else:
+            assert self.targets_input is not None
+            targets = _parse_csv(self.targets_input.value)
+
+        exclude: dict[str, list[str]] = {}
+        for raw_line in self.exclude_input.value.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            if ':' not in line:
+                raise ValueError(f"Formato inválido en Mods Exclude: '{line}' (usa 'Servidor: patrón1, patrón2').")
+            server_name, raw_patterns = line.split(':', 1)
+            server_name = server_name.strip()
+            if not server_name:
+                raise ValueError('El nombre del servidor en Mods Exclude no puede estar vacío.')
+            patterns = _parse_csv(raw_patterns)
+            if patterns:
+                exclude[server_name] = patterns
+
+        return {
+            'Mods': {
+                'Targets': targets,
+                'Exclude': exclude,
+            }
+        }
+
+
 class ServerPluginsModal(_BaseConfigModal):
     def __init__(self, banner_view: ConfigBannerView, server_name: str) -> None:
         super().__init__(
@@ -1002,10 +1092,17 @@ class ConfigBannerView(discord.ui.View):
                 for srv in configured_servers
             ]
             plugins_text = '\n'.join(plugin_lines) if plugin_lines else '  - *Sin servidores configurados*'
+            mods_exclude_lines = [
+                f'  - `{srv}`: {_fmt_list(patterns)}'
+                for srv, patterns in cfg.mods.exclude.items()
+                if patterns
+            ]
+            mods_exclude_text = '\n'.join(mods_exclude_lines) if mods_exclude_lines else '  - *Ninguno*'
             return (
                 f'- **Servers:** {_fmt_list(cfg.servers)}\n'
                 f'- **Guide Targets:** {_fmt_list(cfg.guide_targets)}\n'
                 f'- **Mods Targets:** {_fmt_list(cfg.mods.targets)}\n'
+                f'- **Mods Exclude:**\n{mods_exclude_text}\n'
                 f'- **Plugins por servidor:**\n{plugins_text}'
             )
         if self.page == 3:
@@ -1104,12 +1201,20 @@ class ConfigBannerView(discord.ui.View):
                     label='Servers & Guide Targets',
                     value='servers_targets',
                     description='Procesos activos y sincronización de guías',
-                )
+                ),
+                discord.SelectOption(
+                    label='Mods (Targets & Exclude)',
+                    value='mods',
+                    description='Servidores destino y exclusiones de AeternumBot/Mods/',
+                ),
             ]
-            factories = {'servers_targets': ServersTargetsModal}
+            factories: dict[str, Any] = {
+                'servers_targets': ServersTargetsModal,
+                'mods': ModsModal,
+            }
             plugin_files = _available_plugin_files()
             if plugin_files:
-                for server_name in self.cfg.servers[:24]:
+                for server_name in self.cfg.servers[:23]:
                     key = f'plugins:{server_name}'
                     options.append(
                         discord.SelectOption(
