@@ -73,9 +73,6 @@ Controls natural phantom spawning.
 \dark_gray• \yellowmobcap\reset: phantoms respect the hostile mob cap.
 \dark_gray• \yellowdisable\reset: phantoms do not spawn naturally.
 
-\yellowcraftableCalcite\reset — disabled by default
-Enables crafting 2 calcite blocks in a crafting table or crafter using 4 amethyst shards in the corners, 4 nether quartz on the edges, and 1 smooth basalt in the center.
-
 —————————————————————————————————
 \aqua\boldWELCOME MESSAGE AND TASKS\reset
 —————————————————————————————————
@@ -99,7 +96,7 @@ Deletes the indicated public task. Afterwards shows the list again to confirm th
 \aqua\boldPERSONAL LIST\reset
 —————————————————————————————————
 
-\yellowcommandTodoList\reset enables \yellow/todo\reset. Notes are personal: neither OP nor other players see or modify someone else's list.
+\yellowtodoList\reset enables \yellow/todo\reset. Notes are personal: neither OP nor other players see or modify someone else's list.
 
 \yellow/todo\reset or \yellow/todo list\reset — \greenFOR EVERYONE\reset
 Shows your numbered notes. Each line includes a clickable X to delete that note.
@@ -160,7 +157,7 @@ A wait uses seconds. Before saving, review destructive commands, permissions, or
 \aqua\boldMATERIALS: PROJECT COLLECTION LISTS\reset
 —————————————————————————————————
 
-\yellowcommandMaterials\reset enables \yellow/materials\reset. Lists are CSV files in \yellowworld/data/aeternum_materials/\reset and compare the target amounts against what is stored and what each player carries.
+\yellowcommandProjects\reset enables \yellow/materials\reset and \yellow/projects\reset. Lists are CSV files in \yellowworld/data/aeternum_materials/\reset and compare the target amounts against what is stored and what each player carries.
 
 \yellow/materials\reset — \greenFOR EVERYONE\reset
 Opens the material lists. The detail screen shows each item with its Total, Missing and who claimed it.

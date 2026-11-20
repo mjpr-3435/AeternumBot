@@ -2,7 +2,7 @@
 
 The materials system tracks the items a project needs and how many are still missing. It compares the target amounts against what is stored in a single storage area and what each player is carrying.
 
-Administration activates \yellowcommandMaterials\reset to enable \yellow/materials\reset. The interface requires the Aeternum Carpet client.
+Administration activates \yellowcommandProjects\reset to enable \yellow/materials\reset and \yellow/projects\reset. The interface requires the Aeternum Carpet client.
 
 —————————————————————————————————
 \aqua\boldHOW LISTS ARE BUILT\reset

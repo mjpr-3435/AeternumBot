@@ -2,7 +2,7 @@
 
 El sistema de materiales controla los ítems que necesita un proyecto y cuántos faltan todavía. Compara las cantidades objetivo contra lo que hay almacenado en una única zona de almacenamiento y lo que lleva cada jugador.
 
-Administración activa \yellowcommandMaterials\reset para habilitar \yellow/materials\reset. La interfaz requiere el cliente Aeternum Carpet.
+Administración activa \yellowcommandProjects\reset para habilitar \yellow/materials\reset y \yellow/projects\reset. La interfaz requiere el cliente Aeternum Carpet.
 
 —————————————————————————————————
 \aqua\boldCÓMO SE CREAN LAS LISTAS\reset
