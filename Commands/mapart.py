@@ -20,17 +20,15 @@ class MapartCommandCog(commands.Cog):
 
     @app_commands.command(
         name='splitmap',
-        description='Divide un mapart 2D (.litematic) en regiones rectangulares de máximo N slots.',
+        description='Divide un mapart 2D (.litematic) en regiones rectangulares de máximo 27 slots.',
     )
     @app_commands.describe(
         archivo='Archivo .litematic del mapart 2D',
-        max_slots='Máximo de slots de inventario por región (por defecto 27)',
     )
     async def splitmap(
         self,
         interaction: discord.Interaction,
         archivo: discord.Attachment,
-        max_slots: app_commands.Range[int, 1, 54] = 27,
     ) -> None:
         if not archivo.filename.lower().endswith('.litematic'):
             await interaction.response.send_message(
@@ -53,7 +51,6 @@ class MapartCommandCog(commands.Cog):
             result = await asyncio.to_thread(
                 split_mapart_litematic,
                 raw_data,
-                max_slots=max_slots,
                 source_name=archivo.filename,
             )
         except MapartSplitError as exc:
@@ -68,7 +65,7 @@ class MapartCommandCog(commands.Cog):
         summary = (
             f'✔ **{result.filename}**\n'
             f'- **Dimensiones:** `{result.width} × {result.length}` (`{result.total_blocks:,}` bloques)\n'
-            f'- **Regiones:** `{len(result.regions)}` (máx. `{max_slots}` slots)\n'
+            f'- **Regiones:** `{len(result.regions)}` (máx. `27` slots)\n'
             f'- **Slots/región:** mín `{min(slots_list)}` · prom `{avg_slots:.1f}` · máx `{max(slots_list)}`'
         )
         out_file = discord.File(io.BytesIO(result.data), filename=result.filename)
