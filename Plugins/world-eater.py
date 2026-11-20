@@ -189,6 +189,7 @@ class plugin(BasePlugin):
 
         titles = {
             'started': f'Vigilancia iniciada — {zone_name}',
+            'active': f'World Eater en marcha — {zone_name}',
             'stalled': f'World Eater ATASCADO — {zone_name}',
             'low_y': f'World Eater en capas bajas — {zone_name}',
             'resumed': f'World Eater reanudado — {zone_name}',
@@ -197,6 +198,7 @@ class plugin(BasePlugin):
         }
         colors = {
             'started': 0x3FD8FF,
+            'active': 0x4CAF50,
             'stalled': 0xFF5252,
             'low_y': 0x4CAF50,
             'resumed': 0x4CAF50,
