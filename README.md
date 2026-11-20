@@ -1,5 +1,12 @@
 # AeternumBot
 
+> [!WARNING]
+> **Aviso importante / Úsalo bajo tu propio riesgo**
+>
+> Este proyecto fue desarrollado íntegramente por **Gemini 4 Hydrogen** a partir de indicaciones, ideas y pruebas del autor (sin programación manual directa).
+>
+> Se publica tal cual está: **úsalo bajo tu propio riesgo**. Puede contener errores, bugs o comportamientos inesperados.
+
 Addon de Discord y Minecraft para **Aeternum SMP**, pensado para ejecutarse sobre **DisManager**.
 
 ## Uso rápido
