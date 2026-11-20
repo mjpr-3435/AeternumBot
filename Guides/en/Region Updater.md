@@ -24,7 +24,7 @@ Shows the list: \greenru\reset means copy from SMP and \redrm\reset means remove
 \yellow!!ru clear\reset
 Empties both lists and clears any pending \yellowpos1\reset / \yellowpos2\reset corners.
 
-\dark_grayEach region measures 512 × 512 blocks. It includes a complete Overworld, Nether or End region depending on where you are; it is not a fine selection.
+\dark_grayEach region measures 512 × 512 blocks. It includes a complete Overworld, Nether or End region depending on where you are; it is not a fine selection. Selections are capped at \yellow2,500 regions\reset (approx. 25.6k × 25.6k blocks).
 
 —————————————————————————————————
 \aqua\boldUPDATING THE CREATIVE SERVER\reset

@@ -157,27 +157,6 @@ Directly runs a package from chat. Matching is case-insensitive; for example \ye
 A wait uses seconds. Before saving, review destructive commands, permissions, order and target: Actions does not ask for additional confirmation when a package is executed.
 
 —————————————————————————————————
-\aqua\boldBLOCKERS\reset
-—————————————————————————————————
-
-\yellowcommandBlockers\reset enables \yellow/blockers\reset. It is used to search for blocks configured as blockers within a selection; the analysis is saved and can be reviewed in the interface.
-
-\yellow/blockers\reset — \greenFOR EVERYONE\reset
-Opens the analysis interface. Any player can review analyses and results. Only OP sees and can use the delete X, while holding Shift.
-
-\yellow/blockers list\reset — \greenFOR EVERYONE\reset
-Shows the block types that are considered blockers.
-
-\yellow/blockers list add <block>\reset — \redOP ONLY\reset
-Adds a valid block to the list. Accepts a full id like \yellowminecraft:slime_block\reset or the short vanilla name when possible.
-
-\yellow/blockers list remove <block>\reset — \redOP ONLY\reset
-Removes a block from that list. Subsequent analyses will no longer count it.
-
-\yellow/blockers <coord1> <coord2> <name>\reset — \greenFOR EVERYONE\reset
-Starts the analysis of the cube between both coordinates in the current dimension. The name uses lowercase, numbers, _ or - and cannot be repeated. Each analysis can cover up to 25,000,000 blocks. Each player can only have one pending and the server supports a maximum of four pending to avoid an absurd queue; the result reports how many chunks will be analyzed.
-
-—————————————————————————————————
 \aqua\boldMATERIALS: PROJECT COLLECTION LISTS\reset
 —————————————————————————————————
 
@@ -278,18 +257,60 @@ Sets the maximum chunks per minute. The system does not always use that maximum:
 The selection is automatically exported per dimension for external world maintenance. It does not require a manual export command.
 
 —————————————————————————————————
+\aqua\boldAETERNUM DOCK, PROJECTS AND PERIMETERS\reset
+—————————————————————————————————
+
+\yellowquickDock\reset — disabled by default
+Enables the \yellowAeternum Dock\reset client overlay with quick access to server screens, MOTD tasks and dimension switcher.
+
+\yellowcommandProjects\reset — disabled by default
+Enables \yellow/projects\reset to manage server projects, material lists and linked \yellow.litematic\reset files.
+
+\yellowcommandPerimeters\reset — disabled by default
+Enables \yellow/perimeter\reset (\redOP ONLY\reset) to register and monitor World Eater perimeters with target Y alerts, stall timeout and spectator bot grid at \yellowY=128\reset.
+
+—————————————————————————————————
+\aqua\boldQUALITY OF LIFE, BOTS AND STABILITY\reset
+—————————————————————————————————
+
+\yellowcameraMode\reset — default value: \yellowoff\reset (\yellowoff\reset, \yellowon\reset, \yellowrestrictive\reset)
+Enables \yellow/cs\reset (\greenFOR EVERYONE\reset) to toggle temporary camera/spectator mode. In \yellowrestrictive\reset it blocks activating it while in danger.
+
+\yellowcarefulBreak\reset — disabled by default
+Enables \yellow/carefulbreak <off|sneak|always>\reset (\greenFOR EVERYONE\reset) to send mined drops directly into your inventory.
+
+\yellowcommandHat\reset — disabled by default
+Enables \yellow/hat\reset (\greenFOR EVERYONE\reset) to equip the held item on your head.
+
+\yellowcommandDimension\reset — disabled by default
+Enables \yellow/nether\reset, \yellow/overworld\reset and \yellow/end\reset (\greenFOR EVERYONE\reset in Creative or Spectator) to travel quickly between dimensions.
+
+\yellowplayerSit\reset — disabled by default
+Allows sitting in place. Includes \yellow/sitbehaviour clean armor_stands\reset (\redOP ONLY\reset) to clean up orphaned armor stands.
+
+\yellowcommandViewInventory\reset — disabled by default
+Enables \yellow/viewinv <player>\reset (\redOP ONLY\reset) to inspect online or offline player inventories.
+
+\yelloweditBotInventory\reset — disabled by default
+Allows editing fake players' inventories and switching their game mode from the bot inventory screen.
+
+\yellowreloadFakePlayers\reset — disabled by default
+Saves active fake players before server shutdown and respawns them automatically on startup.
+
+\yellowendermanGriefing\reset — default value: \yellowvanilla\reset (\yellowvanilla\reset, \yellowfarm_only\reset, \yellowdisable\reset)
+Controls whether endermen can pick up or place blocks.
+
+\yellowoldFlintAndSteelBehavior\reset — disabled by default
+Restores classic flint and steel ignition behavior.
+
+\yellowupdateSuppressionCrashFix\reset — default value: \yellowfalse\reset (\yellowfalse\reset, \yellowtrue\reset, \yellowsilence\reset)
+Prevents update suppression exceptions from crashing the server (\yellowsilence\reset also suppresses console warnings).
+
+—————————————————————————————————
 \aqua\boldKEYBINDS\reset
 —————————————————————————————————
 
-Aeternum Carpet registers keybinds in \yellowOptions → Controls → Aeternum\reset to open the screens directly, without typing a command:
-
-\dark_gray• Open /blockers
-\dark_gray• Open /guide
-\dark_gray• Open /materials
-\dark_gray• Open /exploration map
-\dark_gray• Open /actions
-
-By default they have no key assigned: each player chooses their own. Pressing a key asks the server to open that screen; it only works if the corresponding rule is active.
+Aeternum Carpet registers the \yellowAeternum Dock\reset keybind in \yellowOptions → Controls → Aeternum\reset (default \yellowLeft Alt\reset), which opens the quick dock when \yellowquickDock\reset is enabled.
 
 —————————————————————————————————
 \red\boldBEFORE CHANGING ANYTHING\reset

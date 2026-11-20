@@ -18,15 +18,15 @@ Bots conectados.
 \red\boldDentro de Minecraft\reset
 —————————————————————————————————
 
-\aqua\boldEssential Carpet\reset
-\yellow/cs\reset
-Espectador temporal.
-\yellow/subscribe query essential-addons:always_careful\reset 
-Lo que mines se manda directo a tu inventario al agacharte.
-\yellow/subscribe query essential-addons:always_careful\reset
-Lo que mines se manda directo a tu inventario siempre.
-
 \aqua\boldAeternum Carpet\reset
+\yellow/cs\reset
+Alterna modo cámara/espectador temporal (requiere \yellowcameraMode\reset activo).
+\yellow/carefulbreak <off|sneak|always>\reset
+Envía lo que minas directamente a tu inventario (apagado, al agacharse o siempre).
+\yellow/hat\reset
+Equipa en tu cabeza el ítem que llevas en la mano.
+\yellow/nether\reset, \yellow/overworld\reset, \yellow/end\reset
+Teletransporta entre dimensiones conservando posición relativa (solo Creativo o Espectador).
 \yellow/quickshulker\reset
 Alterna abrir shulkers directamente desde la mano al usarlas en el aire. Solo cambia tu preferencia; no afecta a otros jugadores.
 \yellow/quickenderchest\reset
@@ -42,22 +42,25 @@ Abre la biblioteca de guías del servidor. Consulta \whiteGuides\reset para sabe
 Abre los paquetes de acciones disponibles. Puedes revisarlos y ejecutar uno con ▶.
 \yellow!!<nombre completo del paquete>\reset
 Ejecuta directamente un paquete de Actions desde el chat; el nombre no distingue mayúsculas. Consulta la guía \whiteActions\reset antes de usar paquetes importantes.
-\yellow/blockers\reset
-Abre los análisis de bloqueadores guardados para consultar sus resultados.
-\yellow/blockers <coord1> <coord2> <nombre>\reset
-Pide analizar los bloques dentro de una zona para encontrar bloqueadores de mecanismos. El nombre usa minúsculas, números, _ o -. Cada jugador puede tener un análisis pendiente; usa una selección razonable.
-\dark_grayConsulta la guía \whiteBlockers\dark_gray para entender los resultados, las selecciones visuales y los límites del sistema.
 \yellow/materials\reset
 Abre las listas de materiales del proyecto. Consulta la guía \whiteMateriales\dark_gray para entender listas, claims, zonas de almacenamiento y el overlay del HUD.
-\dark_grayTip: en Opciones → Controles → Aeternum podés asignar teclas para abrir /blockers, /guide, /materials, /exploration map y /actions directamente.
+\yellow/projects\reset
+Abre el gestor de proyectos del servidor y sus archivos \yellow.litematic\reset vinculados.
+\yellow/carefulbreak <off|sneak|always>\reset
+Envía lo que minas directamente a tu inventario (desactivado, al agacharse o siempre).
+\yellow/hat\reset
+Equipa en tu cabeza el ítem que llevas en la mano.
+\yellow/nether\reset, \yellow/overworld\reset, \yellow/end\reset
+Teletransporta entre dimensiones conservando posición relativa (solo Creativo o Espectador).
+\dark_grayTip: pulsa Alt izquierdo para abrir Aeternum Dock y acceder rápido a las pantallas del servidor (cuando quickDock esté activo).
 
-\aqua\boldMCDReforged y MC-Dis\reset
+\aqua\boldMCDReforged y DisManager\reset
 \yellow!!help\reset
 Lista de comandos de MCDReforged.
 \yellow!!mdhelp\reset
-Lista de comandos de MC-Dis.
+Lista de comandos de DisManager / plugins del servidor.
 
-\aqua\boldUtilidades MC-Dis\reset
+\aqua\boldUtilidades del Servidor\reset
 \yellow!!calc ==<expresión>\reset
 Calcula una expresión.
 \yellow!!calc =?<expresión>\reset

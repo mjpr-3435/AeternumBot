@@ -24,7 +24,7 @@ Muestra la lista: \greenru\reset significa copiar desde SMP y \redrm\reset signi
 \yellow!!ru clear\reset
 Vacía ambas listas y limpia cualquier esquina \yellowpos1\reset / \yellowpos2\reset pendiente.
 
-\dark_grayCada región mide 512 × 512 bloques. Incluye una región completa de Overworld, Nether o End según dónde estés; no es una selección fina.
+\dark_grayCada región mide 512 × 512 bloques. Incluye una región completa de Overworld, Nether o End según dónde estés; no es una selección fina. El máximo por lista es de \yellow2,500 regiones\reset (aprox. 25.6k × 25.6k bloques).
 
 —————————————————————————————————
 \aqua\boldACTUALIZAR EL SERVIDOR CREATIVO\reset

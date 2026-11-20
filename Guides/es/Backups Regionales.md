@@ -10,7 +10,7 @@ Un backup regional guarda solo regiones elegidas: terreno, POI y entidades de Ov
 Añade la región donde estás parado.
 
 \yellow!!rb pos1\reset y \yellow!!rb pos2\reset
-Marca un rectángulo en la dimensión actual. Se añaden todas las regiones que lo crucen; no selecciona bloques exactos.
+Marca un rectángulo en la dimensión actual. Se añaden todas las regiones que lo crucen; no selecciona bloques exactos. El máximo total permitido por selección es de \yellow2,500 regiones\reset (50×50, aprox. 25.6k × 25.6k bloques).
 
 \yellow!!rb list\reset
 Muestra la selección numerada por dimensión.

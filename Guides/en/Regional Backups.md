@@ -10,7 +10,7 @@ A regional backup saves only chosen regions: terrain, POI and entities from Over
 Adds the region where you are standing.
 
 \yellow!!rb pos1\reset and \yellow!!rb pos2\reset
-Mark a rectangle in the current dimension. All regions it crosses are added; it does not select exact blocks.
+Mark a rectangle in the current dimension. All regions it crosses are added; it does not select exact blocks. Selections are capped at \yellow2,500 regions\reset (50×50, approx. 25.6k × 25.6k blocks).
 
 \yellow!!rb list\reset
 Shows the numbered selection by dimension.
