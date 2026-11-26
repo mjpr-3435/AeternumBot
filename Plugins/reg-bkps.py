@@ -38,7 +38,7 @@ def _dim_folders(dim: str) -> tuple[str, str, str]:
 
 
 class plugin(BasePlugin):
-    """Per-region zip backup, partial md-bkp restore, and whitelist manager."""
+    """Per-region zip backup and partial md-bkp restore."""
 
     process: ManagedProcess
     server: AeServer
@@ -51,8 +51,6 @@ class plugin(BasePlugin):
     load_confirmed: bool
     loading_bkp: bool
     reg_bkps_dir: Path
-    whitelist_text_path: Path
-    whitelisted_players: set[str]
 
     def __init__(self, process: ManagedProcess) -> None:
         self.process = process
@@ -68,10 +66,6 @@ class plugin(BasePlugin):
 
         self.reg_bkps_dir = self.process.plugins_dir / 'reg-bkps'
         self.reg_bkps_dir.mkdir(parents=True, exist_ok=True)
-        self.whitelist_text_path = self.reg_bkps_dir / 'whitelist.txt'
-        if not self.whitelist_text_path.exists():
-            self.whitelist_text_path.write_text('', encoding='utf-8')
-        self.whitelisted_players = self._load_whitelist()
 
     async def on_process_log(self, log: str) -> None:
         if 'INFO]:' in log and log.rstrip().endswith('Saved the game') and self.waiting:
@@ -191,7 +185,7 @@ class plugin(BasePlugin):
             zip_path = self.reg_bkps_dir / f'{name}.zip'
 
             author = self._read_zip_author(zip_path)
-            if not self._is_admin_or_whitelisted(player):
+            if player not in self.server.admins:
                 if author is None:
                     self.server.send_response(player, '✖ No se puede actualizar: backup sin autor registrado.')
                     return
@@ -209,7 +203,7 @@ class plugin(BasePlugin):
             await self._update_reg_bkp(player, name)
             return
 
-        if not self._is_admin_or_whitelisted(player) and self.server.name == 'SMP':
+        if player not in self.server.admins and self.server.name == 'SMP':
             return
 
         if self.server.is_command(message, 'rb load-md'):
@@ -224,6 +218,8 @@ class plugin(BasePlugin):
                 return
 
             self.scheduled_backup[player] = zip_name
+            target_regions = self._read_zip_regions(self.reg_bkps_dir / zip_name)
+            self._warn_collisions(player, target_regions, exclude_name=zip_name)
             cmd = f'{self.server.prefix}rb confirm'
             tellraw_json = extras(
                 [hover_and_suggest(cmd, color='dark_gray', suggest=cmd, hover=cmd)],
@@ -264,7 +260,7 @@ class plugin(BasePlugin):
                 return
 
             author = self._read_zip_author(zip_path)
-            if not self._is_admin_or_whitelisted(player):
+            if player not in self.server.admins:
                 if author is None:
                     self.server.send_response(player, '✖ No se puede eliminar: backup sin autor registrado.')
                     return
@@ -280,37 +276,6 @@ class plugin(BasePlugin):
             self.server.send_response(player, f'✔ reg-bkp {zip_name} eliminado.')
             return
 
-        if player not in self.server.admins or self.server.name != 'SMP':
-            return
-
-        if self.server.is_command(message, 'rb wl list'):
-            self._show_whitelist(player)
-        elif self.server.is_command(message, 'rb wl add'):
-            target = message.removeprefix(f'{self.server.prefix}rb wl add').strip()
-            if not target:
-                self.server.send_response(player, '✖ Debes proveer un jugador.')
-                return
-            self.whitelisted_players.add(target)
-            self._save_whitelist()
-            self.server.send_response(player, f'✔ {target} agregado a la whitelist.')
-            self._show_whitelist(player)
-        elif self.server.is_command(message, 'rb wl remove'):
-            target = message.removeprefix(f'{self.server.prefix}rb wl remove').strip()
-            if not target:
-                self.server.send_response(player, '✖ Debes proveer un jugador.')
-                return
-            if target in self.whitelisted_players:
-                self.whitelisted_players.remove(target)
-                self._save_whitelist()
-                self.server.send_response(player, f'✔ {target} removido de la whitelist.')
-            else:
-                self.server.send_response(player, f'✖ {target} no está en la whitelist.')
-            self._show_whitelist(player)
-        elif self.server.is_command(message, 'rb wl clear'):
-            self.whitelisted_players.clear()
-            self._save_whitelist()
-            self.server.send_response(player, '✔ Whitelist limpiada.')
-
     def _show_help(self, player: str) -> None:
         self.server.show_command(player, 'rb clear', 'Limpia tu lista.')
         self.server.show_command(player, 'rb list', 'Muestra tu lista de regiones.')
@@ -323,7 +288,7 @@ class plugin(BasePlugin):
         self.server.show_command(player, 'rb update <name>', 'Actualiza el reg-bkp <name>.zip reimportando regiones.')
         self.server.show_command(player, 'rb bkps', 'Lista los backups creados.')
 
-        if not self._is_admin_or_whitelisted(player) and self.server.name == 'SMP':
+        if player not in self.server.admins and self.server.name == 'SMP':
             return
         self.server.show_command(player, 'rb load-bkp <name>', 'Carga el reg-bkp <name>.zip.')
         self.server.show_command(player, 'rb load-md', 'Lista los md-bkps disponibles.')
@@ -331,12 +296,6 @@ class plugin(BasePlugin):
         self.server.show_command(player, 'rb del-bkp <name>', 'Elimina el reg-bkp <name>.zip.')
         self.server.show_command(player, 'rb confirm-md', 'Confirma la carga del md-bkp especificado.')
         self.server.show_command(player, 'rb confirm', 'Confirma la carga del reg-bkp específicado.')
-
-        if player in self.server.admins:
-            self.server.show_command(player, 'rb wl list', 'Muestra la whitelist de carga de reg-bkps.')
-            self.server.show_command(player, 'rb wl add <player>', 'Añade un jugador a la whitelist.')
-            self.server.show_command(player, 'rb wl remove <player>', 'Quita un jugador de la whitelist.')
-            self.server.show_command(player, 'rb wl clear', 'Limpia toda la whitelist.')
 
     async def _handle_load_md(self, player: str, message: str) -> None:
         if not self._has_md_bkps():
@@ -371,6 +330,12 @@ class plugin(BasePlugin):
             return
 
         self.scheduled_backup_md[player] = selected
+        target_regions = {
+            (dim, reg)
+            for dim in _DIMS
+            for reg in self.files_to_zip[player][dim]
+        }
+        self._warn_collisions(player, target_regions)
         cmd = f'{self.server.prefix}rb confirm-md'
         tellraw_json = extras(
             [hover_and_suggest(cmd, color='dark_gray', suggest=cmd, hover=cmd)],
@@ -556,6 +521,61 @@ class plugin(BasePlugin):
         return None
 
     @staticmethod
+    def _read_zip_regions(zip_path: Path) -> set[tuple[str, str]]:
+        regions: set[tuple[str, str]] = set()
+        try:
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                names = zip_ref.namelist()
+                if 'bkp_log.txt' in names:
+                    raw_lines = zip_ref.read('bkp_log.txt').decode('utf-8', errors='replace').splitlines()
+                    for line in raw_lines:
+                        if ' : r.' in line and line.endswith('.mca'):
+                            dim, region = (part.strip() for part in line.split(':', 1))
+                            if dim in _DIMS:
+                                regions.add((dim, region))
+                    return regions
+
+                dim_prefixes = {
+                    'region/': 'overworld',
+                    'DIM-1/region/': 'the_nether',
+                    'DIM1/region/': 'the_end',
+                }
+                for entry in names:
+                    normalized = entry.replace('\\', '/')
+                    for prefix, dim in dim_prefixes.items():
+                        if normalized.startswith(prefix) and normalized.endswith('.mca'):
+                            regions.add((dim, Path(normalized).name))
+                            break
+        except (zipfile.BadZipFile, OSError):
+            return set()
+        return regions
+
+    def _find_colliding_bkps(
+        self,
+        target_regions: set[tuple[str, str]],
+        exclude_name: str | None = None,
+    ) -> list[str]:
+        if not target_regions:
+            return []
+        collisions: list[str] = []
+        for zip_path in sorted(self.reg_bkps_dir.glob('*.zip'), key=lambda path: path.name):
+            if zip_path.name == exclude_name:
+                continue
+            if target_regions & self._read_zip_regions(zip_path):
+                collisions.append(zip_path.name)
+        return collisions
+
+    def _warn_collisions(
+        self,
+        player: str,
+        target_regions: set[tuple[str, str]],
+        exclude_name: str | None = None,
+    ) -> None:
+        collisions = self._find_colliding_bkps(target_regions, exclude_name=exclude_name)
+        if collisions:
+            self.server.send_response(player, f'⚠ Comparte regiones con: {", ".join(collisions)}')
+
+    @staticmethod
     def _is_safe_name(name: str) -> bool:
         return bool(name) and '/' not in name and '\\' not in name and '..' not in name
 
@@ -569,28 +589,6 @@ class plugin(BasePlugin):
         if self.player_positions[player][dim][other] is not None:
             if self._add_rect_regions(player, dim):
                 self._show_list(player)
-
-    def _is_admin_or_whitelisted(self, player: str) -> bool:
-        return player in self.server.admins or player in self.whitelisted_players
-
-    def _show_whitelist(self, player: str) -> None:
-        if not self.whitelisted_players:
-            self.server.send_response(player, 'Whitelist vacía.')
-            return
-        lines = ['Whitelist de reg-bkps:']
-        for i, whitelisted in enumerate(sorted(self.whitelisted_players), start=1):
-            lines.append(f'{i} • {whitelisted}')
-        self.server.send_response(player, lines)
-
-    def _load_whitelist(self) -> set[str]:
-        players = self.whitelist_text_path.read_text(encoding='utf-8').strip().splitlines()
-        return {player for player in players if player}
-
-    def _save_whitelist(self) -> None:
-        self.whitelist_text_path.write_text(
-            '\n'.join(sorted(self.whitelisted_players)),
-            encoding='utf-8',
-        )
 
     def _has_md_bkps(self) -> bool:
         return (self.process.plugins_dir / 'md-bkps.py').is_file() and self.process.backups_dir.is_dir()
@@ -638,16 +636,18 @@ class plugin(BasePlugin):
             self.server.send_response(player, 'Lista vacía.')
 
     def _show_bkps(self, player: str) -> None:
-        zips = sorted(self.reg_bkps_dir.glob('*.zip'), key=lambda path: path.name)
-        if not zips:
+        zip_entries = sorted(
+            ((path, self._read_zip_datetime(path)) for path in self.reg_bkps_dir.glob('*.zip')),
+            key=lambda item: (item[1], item[0].name),
+        )
+        if not zip_entries:
             self.server.send_response(player, 'No se han creado backups.')
             return
 
         self.server.send_response(player, 'Reg-bkps disponibles:')
         now = datetime.now()
 
-        for zip_path in zips:
-            creation_time = self._read_zip_datetime(zip_path)
+        for zip_path, creation_time in zip_entries:
             time_ago = self._format_time_ago(creation_time, now)
 
             log_info = self._format_zip_hover(zip_path)
