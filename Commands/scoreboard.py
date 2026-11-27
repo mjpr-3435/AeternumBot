@@ -13,7 +13,7 @@ from discord.ext import commands
 from dismanager.classes import DisManagerClient
 from Utils.rcon import RconError, rcon_execute
 
-PAGE_SIZE = 30
+PAGE_SIZE = 25
 _LIST_CACHE_TTL_S = 20.0
 _LIST_CACHE: dict[str, tuple[float, list[dict[str, Any]]]] = {}
 
