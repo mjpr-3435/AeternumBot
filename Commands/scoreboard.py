@@ -126,8 +126,11 @@ def _build_scoreboard_embed(client: DisManagerClient, data: dict[str, Any]) -> d
 
     if ranks:
         for field_name, col in (('#', ranks), ('Jugador', owners), ('Valor', scores)):
-            block = '```\n' + '\n'.join(col) + '\n```'
-            embed.add_field(name=field_name, value=block, inline=True)
+            if field_name in ('#', 'Valor'):
+                value = '```ansi\n\x1b[0;33m' + '\n'.join(col) + '\x1b[0m\n```'
+            else:
+                value = '```\n' + '\n'.join(col) + '\n```'
+            embed.add_field(name=field_name, value=value, inline=True)
     else:
         embed.description = '*Sin entradas para mostrar.*'
 
