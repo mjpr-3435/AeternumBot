@@ -13,7 +13,7 @@ from discord.ext import commands
 from dismanager.classes import DisManagerClient
 from Utils.rcon import RconError, rcon_execute
 
-PAGE_SIZE = 15
+PAGE_SIZE = 30
 _LIST_CACHE_TTL_S = 20.0
 _LIST_CACHE: dict[str, tuple[float, list[dict[str, Any]]]] = {}
 
@@ -115,19 +115,19 @@ def _build_scoreboard_embed(client: DisManagerClient, data: dict[str, Any]) -> d
     scores: list[str] = []
 
     if total_enabled:
-        ranks.append('**0.**')
-        owners.append('**Total**')
-        scores.append(f'**{total_val:,}**')
+        ranks.append('0.')
+        owners.append('Total')
+        scores.append(f'{total_val:,}')
 
     for row in entries:
-        ranks.append(f"`{int(row.get('rank') or 0)}.`")
+        ranks.append(f"{int(row.get('rank') or 0)}.")
         owners.append(str(row.get('owner') or '?')[:22])
-        scores.append(f"`{int(row.get('score') or 0):,}`")
+        scores.append(f"{int(row.get('score') or 0):,}")
 
     if ranks:
-        embed.add_field(name='#', value='\n'.join(ranks), inline=True)
-        embed.add_field(name='Jugador', value='\n'.join(owners), inline=True)
-        embed.add_field(name='Valor', value='\n'.join(scores), inline=True)
+        for field_name, col in (('#', ranks), ('Jugador', owners), ('Valor', scores)):
+            block = '```\n' + '\n'.join(col) + '\n```'
+            embed.add_field(name=field_name, value=block, inline=True)
     else:
         embed.description = '*Sin entradas para mostrar.*'
 
